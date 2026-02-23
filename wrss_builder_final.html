@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WRSS System Builder</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel2:#1f2937;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#00d4ff;--accent2:#0099bb;--green:#39d353;--orange:#f0883e;--red:#ff6e6e;--code-bg:#0a0e14;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── TOP BAR ── */
+#topbar{height:44px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:6px;z-index:1000;flex-shrink:0}
+.logo{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:var(--accent);letter-spacing:.08em;margin-right:6px}
+.logo span{color:var(--text2)}
+.top-btn{height:28px;padding:0 9px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.top-btn:hover{border-color:var(--accent);color:var(--accent)}
+.top-btn.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
+.top-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.top-btn.primary:hover{background:var(--accent2)}
+.top-btn.danger{color:var(--red);border-color:var(--red)}
+.top-btn.danger:hover{background:rgba(255,110,110,.1)}
+.top-sep{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.spacer{flex:1}
+.tb-input{background:var(--panel2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:3px 6px;border-radius:4px}
+.tb-input:focus{outline:none;border-color:var(--accent)}
+.tb-label{font-size:11px;color:var(--text2);white-space:nowrap}
+
+/* ── MAIN LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ── LEFT TOOLBAR ── */
+#toolbar{width:66px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:2px;z-index:500;flex-shrink:0;overflow-y:auto}
+.tsl{font-size:8px;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;width:100%;text-align:center;padding:5px 0 2px}
+.tool-btn{width:52px;height:48px;border-radius:6px;border:1px solid transparent;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .15s;flex-shrink:0}
+.tool-btn svg{width:22px;height:22px}
+.tool-btn:hover{background:var(--panel2);border-color:var(--border)}
+.tool-btn.active{background:rgba(0,212,255,.1);border-color:var(--accent)}
+.tlabel{font-size:8px;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
+.tool-btn.active .tlabel{color:var(--accent)}
+.tsep{width:38px;height:1px;background:var(--border);margin:2px 0;flex-shrink:0}
+/* push About/Help to bottom */
+.tb-spacer{flex:1}
+
+/* ── MAP ── */
+#map-container{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+#map-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.85);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:11px;color:var(--text2);pointer-events:none;z-index:1000;backdrop-filter:blur(6px);font-family:'IBM Plex Mono',monospace;transition:opacity .3s;white-space:nowrap}
+#map-hint.hidden{opacity:0}
+#connect-overlay{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,153,187,.15);border:1px solid var(--accent);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--accent);z-index:1000;pointer-events:none;backdrop-filter:blur(6px);font-family:'IBM Plex Mono',monospace;display:none}
+
+/* ── RIGHT PANEL ── */
+#right-panel{width:340px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.panel-tab{flex:1;padding:9px 2px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text2);border:none;background:transparent;cursor:pointer;letter-spacing:.04em;border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase}
+.panel-tab:hover{color:var(--text)}
+.panel-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none;height:100%;flex-direction:column}
+.tab-content.active{display:flex}
+.panel-body{flex:1;overflow-y:auto;overflow-x:hidden}
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── PROPS ── */
+#props-panel{padding:12px}
+.props-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text2);font-size:12px;gap:8px;text-align:center}
+.props-empty svg{opacity:.3}
+.prop-group{margin-bottom:14px}
+.pgl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--text2);margin-bottom:7px;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:6px}
+.badge{font-size:8px;padding:1px 6px;border-radius:10px}
+.badge-hydro{background:rgba(240,136,62,.15);color:var(--orange)}
+.badge-opt{background:rgba(139,148,158,.15);color:var(--text2)}
+.badge-ts{background:rgba(0,212,255,.12);color:var(--accent)}
+.prop-row{margin-bottom:8px}
+.prop-label{font-size:11px;color:var(--text2);margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;gap:4px}
+.prop-label-left{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.req{color:var(--orange);font-size:9px;flex-shrink:0}
+.opt{color:var(--text2);font-size:9px;flex-shrink:0}
+.prop-input,.prop-select{width:100%;background:var(--code-bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 8px;transition:border-color .15s}
+.prop-input:focus,.prop-select:focus{outline:none;border-color:var(--accent)}
+.prop-select option{background:var(--panel2)}
+.prop-hint{font-size:10px;color:var(--text2);margin-top:3px;font-family:'IBM Plex Mono',monospace;line-height:1.4}
+.dual-input{display:flex;gap:6px}
+.dual-input .prop-input{flex:1}
+.cond-section{overflow:hidden;transition:max-height .35s ease,opacity .25s;max-height:3000px;opacity:1}
+.cond-section.hidden{max-height:0;opacity:0;pointer-events:none}
+.node-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.node-type-badge{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.node-id{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2)}
+.node-title{font-size:14px;font-weight:500}
+
+/* ── HELP TOOLTIP (?) button — tooltip rendered by JS, not CSS pseudo ── */
+.hq{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--border);color:var(--text2);font-size:9px;font-family:'IBM Plex Mono',monospace;cursor:pointer;flex-shrink:0;transition:all .15s;line-height:1;background:transparent;padding:0;position:relative}
+.hq:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08)}
+
+/* ── MATRIX WIDGET ── */
+.matrix-widget{background:var(--code-bg);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.mw-header{display:grid;grid-template-columns:1fr 1fr 22px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.mw-header span{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--text2);padding:4px 7px;text-transform:uppercase;letter-spacing:.05em}
+.mw-rows{max-height:150px;overflow-y:auto}
+.mw-rows::-webkit-scrollbar{width:3px}
+.mw-rows::-webkit-scrollbar-thumb{background:var(--border)}
+.mw-row{display:grid;grid-template-columns:1fr 1fr 22px;border-bottom:1px solid var(--border)}
+.mw-row:last-child{border-bottom:none}
+.mw-row input{background:transparent;border:none;border-right:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 7px;width:100%;outline:none}
+.mw-row input:focus{background:rgba(0,212,255,.05)}
+.mw-row .dr{width:22px;background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:color .15s}
+.mw-row .dr:hover{color:var(--red)}
+.mw-empty{padding:8px;text-align:center;font-size:10px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+.mw-actions{display:flex;gap:5px;padding:5px 7px;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap}
+.act-btn{height:22px;padding:0 7px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .15s;white-space:nowrap}
+.act-btn:hover{border-color:var(--accent);color:var(--accent)}
+.imp-label{height:22px;padding:0 7px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .15s;display:flex;align-items:center;white-space:nowrap}
+.imp-label:hover{border-color:var(--green);color:var(--green)}
+.imp-label input{display:none}
+.row-count{margin-left:auto;font-size:9px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+
+/* ── TIME SERIES WIDGET ── */
+.ts-widget{background:var(--code-bg);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.ts-scroll{overflow-x:auto;overflow-y:hidden;display:flex;min-height:52px}
+.ts-scroll::-webkit-scrollbar{height:3px}
+.ts-scroll::-webkit-scrollbar-thumb{background:var(--border)}
+.ts-cells{display:flex;flex-shrink:0}
+.ts-cell{display:flex;flex-direction:column;flex-shrink:0;border-right:1px solid var(--border)}
+.ts-cell:last-child{border-right:none}
+.ts-idx{font-size:8px;color:var(--text2);font-family:'IBM Plex Mono',monospace;padding:2px 0;text-align:center;background:var(--panel2);border-bottom:1px solid var(--border);min-width:46px;width:46px}
+.ts-cell input{width:46px;background:transparent;border:none;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 3px;text-align:center;outline:none;flex:1}
+.ts-cell input:focus{background:rgba(0,212,255,.05)}
+.ts-del{width:46px;background:transparent;border:none;border-top:1px solid var(--border);color:transparent;font-size:11px;cursor:pointer;text-align:center;padding:2px 0;transition:color .15s}
+.ts-cell:hover .ts-del{color:var(--red)}
+.ts-empty{padding:10px 14px;font-size:10px;color:var(--text2);font-family:'IBM Plex Mono',monospace;align-self:center}
+.ts-actions{display:flex;gap:5px;padding:5px 7px;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap}
+
+/* ── CONNECTIONS ── */
+.conn-item{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--code-bg);border-radius:4px;margin-bottom:4px;font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;border:1px solid transparent}
+.conn-item:hover{border-color:var(--red)}
+.conn-type{color:var(--text2);font-size:10px}
+.conn-del{margin-left:auto;color:var(--text2);font-size:16px;line-height:1}
+.conn-del:hover{color:var(--red)}
+.conn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── NODES LIST ── */
+.nli{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;transition:background .1s}
+.nli:hover{background:var(--panel2)}
+.nli.sel{background:rgba(0,212,255,.07)}
+.nli-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.nli-id{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2)}
+
+/* ── R CODE ── */
+#code-output{flex:1;background:var(--code-bg);color:#abb2bf;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:12px;overflow-y:auto;white-space:pre;line-height:1.6;border:none;resize:none;width:100%}
+#code-output::-webkit-scrollbar{width:4px}
+#code-output::-webkit-scrollbar-thumb{background:var(--border)}
+.code-toolbar{display:flex;padding:7px 10px;gap:6px;border-top:1px solid var(--border);background:var(--panel);flex-shrink:0}
+
+/* ── DELETE BTN (in properties) ── */
+.del-node-btn{width:100%;margin-top:10px;padding:8px;background:transparent;border:1px solid var(--red);border-radius:4px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s}
+.del-node-btn:hover{background:rgba(255,110,110,.1)}
+
+/* ── STATUS ── */
+#statusbar{height:22px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:14px;flex-shrink:0}
+.si{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text2);display:flex;align-items:center;gap:4px}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* ── MODALS (shared) ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);z-index:9000;display:none;align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+
+/* connection type modal */
+#conn-modal .modal-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px;width:310px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.modal-sub{font-size:11px;color:var(--text2);margin-bottom:12px;font-family:'IBM Plex Mono',monospace}
+.modal-opt{display:flex;flex-direction:column;padding:9px;border-radius:5px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s}
+.modal-opt:hover{border-color:var(--accent);background:rgba(0,212,255,.05)}
+.modal-opt-title{font-size:12px;font-weight:500;margin-bottom:2px}
+.modal-opt-desc{font-size:10px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+.modal-cancel{width:100%;padding:8px;margin-top:6px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
+.modal-cancel:hover{color:var(--text);border-color:var(--text)}
+
+/* ── ABOUT MODAL ── */
+#about-modal .about-box{background:rgba(22,27,34,.96);border:1px solid var(--border);border-radius:12px;width:520px;max-width:94vw;box-shadow:0 30px 80px rgba(0,0,0,.7);overflow:hidden}
+.about-header{padding:28px 30px 20px;border-bottom:1px solid var(--border);position:relative}
+.about-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--accent);letter-spacing:.06em;margin-bottom:4px}
+.about-logo span{color:var(--text2)}
+.about-tagline{font-size:12px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+.about-close{position:absolute;top:18px;right:18px;width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.about-close:hover{border-color:var(--red);color:var(--red)}
+.about-body{padding:24px 30px;overflow-y:auto;max-height:65vh}
+.about-body::-webkit-scrollbar{width:4px}
+.about-body::-webkit-scrollbar-thumb{background:var(--border)}
+.about-section{margin-bottom:22px}
+.about-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.about-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.about-text{font-size:13px;color:var(--text2);line-height:1.75}
+.about-text b{color:var(--text)}
+.about-text code{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);background:rgba(0,212,255,.08);padding:1px 5px;border-radius:3px}
+.about-pill-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.about-pill{font-size:11px;font-family:'IBM Plex Mono',monospace;padding:3px 10px;border-radius:12px;border:1px solid var(--border);color:var(--text2)}
+.about-pill.river{border-color:#4fc3f766;color:#4fc3f7;background:#4fc3f708}
+.about-pill.reservoir{border-color:#2196f366;color:#2196f3;background:#2196f308}
+.about-pill.junction{border-color:#bdbdbd66;color:#bdbdbd;background:#bdbdbd08}
+.about-pill.diversion{border-color:#ff980066;color:#ff9800;background:#ff980008}
+.about-pill.aquifer{border-color:#a1887f66;color:#a1887f;background:#a1887f08}
+.about-pill.demand{border-color:#ef535066;color:#ef5350;background:#ef535008}
+.about-dev-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:16px 18px;display:flex;gap:14px;align-items:center}
+.about-dev-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0047ab);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px;color:#fff;flex-shrink:0}
+.about-dev-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.about-dev-sub{font-size:11px;color:var(--text2);line-height:1.5}
+.about-dev-sub a{color:var(--accent);text-decoration:none}
+.about-dev-sub a:hover{text-decoration:underline}
+.about-footer{padding:14px 30px;border-top:1px solid var(--border);font-size:10px;color:var(--text2);font-family:'IBM Plex Mono',monospace;display:flex;justify-content:space-between;align-items:center}
+
+/* ── HELP MODAL ── */
+#help-modal .help-box{background:rgba(22,27,34,.96);border:1px solid var(--border);border-radius:12px;width:680px;max-width:96vw;height:540px;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.7);overflow:hidden}
+.help-top{display:flex;align-items:center;padding:0 18px;height:46px;border-bottom:1px solid var(--border);flex-shrink:0;gap:2px}
+.help-tab-btn{height:32px;padding:0 12px;border-radius:4px;border:none;background:transparent;color:var(--text2);font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:.03em}
+.help-tab-btn:hover{color:var(--text)}
+.help-tab-btn.active{color:var(--accent);background:rgba(0,212,255,.08)}
+.help-close{margin-left:auto;width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.help-close:hover{border-color:var(--red);color:var(--red)}
+.help-body{flex:1;overflow-y:auto;padding:18px 22px}
+.help-body::-webkit-scrollbar{width:4px}
+.help-body::-webkit-scrollbar-thumb{background:var(--border)}
+.help-section{margin-bottom:20px}
+.help-section-title{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.help-row{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(48,54,61,.5);font-size:12px;align-items:flex-start}
+.help-row:last-child{border-bottom:none}
+.help-key{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);flex-shrink:0;min-width:100px;line-height:1.5}
+.help-val{color:var(--text2);line-height:1.6}
+.help-val b{color:var(--text)}
+.help-kbd{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--text);margin:0 2px}
+.help-badge{font-size:9px;padding:1px 6px;border-radius:10px;font-family:'IBM Plex Mono',monospace}
+.hb-req{background:rgba(240,136,62,.15);color:var(--orange)}
+.hb-opt{background:rgba(139,148,158,.15);color:var(--text2)}
+.hb-ts{background:rgba(0,212,255,.12);color:var(--accent)}
+.hb-mat{background:rgba(57,211,83,.12);color:var(--green)}
+.help-type-row{display:flex;align-items:flex-start;gap:12px;padding:10px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
+.help-type-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;margin-top:4px}
+.help-type-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.help-type-fn{font-family:'IBM Plex Mono',monospace;font-size:10px;margin-bottom:4px}
+.help-type-desc{font-size:12px;color:var(--text2);line-height:1.55}
+.conn-legend{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(48,54,61,.5);font-size:12px}
+.conn-legend:last-child{border-bottom:none}
+.conn-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── IMPORT MODAL ── */
+#import-modal .import-box{background:rgba(22,27,34,.97);border:1px solid var(--border);border-radius:12px;width:480px;max-width:95vw;box-shadow:0 30px 80px rgba(0,0,0,.7);overflow:hidden}
+.import-header{padding:20px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.import-title{font-size:14px;font-weight:600;color:var(--text)}
+.import-close{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.import-close:hover{border-color:var(--red);color:var(--red)}
+.import-body{padding:20px 24px}
+.import-summary{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.8;color:var(--text2)}
+.import-summary b{color:var(--accent)}
+.import-warn{background:rgba(240,136,62,.08);border:1px solid rgba(240,136,62,.3);border-radius:5px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:14px;line-height:1.6}
+.import-footer{display:flex;gap:8px;padding:14px 24px;border-top:1px solid var(--border);background:var(--panel)}
+.import-ok{flex:1;padding:9px;background:var(--accent);border:none;border-radius:5px;color:#000;font-weight:600;font-size:12px;cursor:pointer;font-family:'IBM Plex Mono',monospace}
+.import-ok:hover{background:var(--accent2)}
+.import-cancel{padding:9px 18px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:12px;cursor:pointer;font-family:'IBM Plex Mono',monospace}
+.import-cancel:hover{border-color:var(--text);color:var(--text)}
+
+/* ── SMART TOOLTIP (JS-driven) ── */
+#hq-tip{
+  position:fixed;
+  z-index:99999;
+  background:var(--panel2);
+  border:1px solid var(--accent);
+  border-radius:6px;
+  padding:9px 12px;
+  font-size:11px;
+  color:var(--text);
+  font-family:'IBM Plex Sans',sans-serif;
+  line-height:1.6;
+  white-space:normal;
+  width:242px;
+  max-width:calc(100vw - 20px);
+  box-shadow:0 8px 28px rgba(0,0,0,.6);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .15s;
+  word-break:break-word;
+}
+#hq-tip.visible{opacity:1}
+
+/* ── LEAFLET ── */
+.leaflet-container{background:#1a1d26}
+.leaflet-control-zoom a{background:var(--panel)!important;color:var(--text)!important;border-color:var(--border)!important}
+.leaflet-control-zoom a:hover{background:var(--panel2)!important;color:var(--accent)!important}
+.leaflet-control-attribution{background:rgba(13,17,23,.7)!important;color:var(--text2)!important;font-size:9px!important}
+.wrss-tooltip{background:#161b22!important;border:1px solid #30363d!important;color:#e6edf3!important;font-family:'IBM Plex Mono',monospace!important;font-size:11px!important;border-radius:5px!important;box-shadow:0 4px 12px rgba(0,0,0,.4)!important}
+.wrss-tooltip::before{display:none}
+</style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<div id="topbar">
+  <div class="logo">WRSS <span>// Builder</span></div>
+  <div class="top-sep"></div>
+  <button class="top-btn" onclick="setMode('select')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2l10 6-5 1-2 5z"/></svg>Select
+  </button>
+  <button class="top-btn" onclick="setConnectMode()" id="btn-connect">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="8" r="2"/><line x1="5" y1="8" x2="11" y2="8"/><path d="M10 6l3 2-3 2" fill="none"/></svg>Connect
+  </button>
+  <div class="top-sep"></div>
+  <span class="tb-label">Area:</span>
+  <input id="sim-name" type="text" class="tb-input" value="MyBasin" style="width:110px"/>
+  <span class="tb-label">Start:</span><input id="sim-start" type="date" class="tb-input" value="2010-01-01"/>
+  <span class="tb-label">End:</span><input id="sim-end" type="date" class="tb-input" value="2019-12-01"/>
+  <select id="sim-interval" class="tb-input">
+    <option value="month">Monthly</option>
+    <option value="week">Weekly</option>
+    <option value="day">Daily</option>
+  </select>
+  <div class="top-sep"></div>
+  <button class="top-btn active" id="btn-bg" onclick="toggleBg()" title="Toggle map background">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="14" height="14" rx="2"/><path d="M1 6h14M6 1v14"/></svg>Map BG
+  </button>
+  <div class="top-sep"></div>
+  <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--text2);white-space:nowrap;user-select:none">
+    <input type="checkbox" id="chk-labels" onchange="toggleLabels(this.checked)" style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer"/>
+    Show Labels
+  </label>
+  <div class="spacer"></div>
+  <label class="top-btn" style="cursor:pointer;color:var(--green);border-color:var(--green)" title="Import WRSS JSON model file">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3"/><rect x="2" y="11" width="12" height="3" rx="1"/></svg>
+    Import JSON
+    <input type="file" accept=".json" style="display:none" onchange="importJSON(event)"/>
+  </label>
+  <div class="top-sep"></div>
+  <button class="top-btn danger" onclick="clearAll()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,4 15,4"/><path d="M3 4l1 10h8l1-10M6 4V2h4v2"/></svg>Clear
+  </button>
+  <button class="top-btn primary" onclick="showCode()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="5,4 2,8 5,12"/><polyline points="11,4 14,8 11,12"/></svg>R Code
+  </button>
+</div>
+
+<div id="main">
+
+<!-- ══ LEFT TOOLBAR ══ -->
+<div id="toolbar">
+  <div class="tsl">Tools</div>
+  <button class="tool-btn active" id="tool-select" onclick="setMode('select')" title="Select & drag nodes (V)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3l16 9-8 2-3 8z"/></svg>
+    <span class="tlabel">Select</span>
+  </button>
+  <div class="tsep"></div>
+  <div class="tsl">Add</div>
+  <button class="tool-btn" id="tool-river" onclick="setMode('river')" title="Place River node (R)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#4fc3f7" stroke-width="2"><path d="M3 12C6 8 10 16 14 12S20 8 21 12"/><circle cx="3" cy="12" r="2" fill="#4fc3f7"/></svg>
+    <span class="tlabel">River</span>
+  </button>
+  <button class="tool-btn" id="tool-reservoir" onclick="setMode('reservoir')" title="Place Reservoir node (S)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#2196f3" stroke-width="2"><path d="M3 18L12 6l9 12z"/><rect x="6" y="18" width="12" height="2" fill="#2196f3" opacity=".4"/></svg>
+    <span class="tlabel">Reservoir</span>
+  </button>
+  <button class="tool-btn" id="tool-junction" onclick="setMode('junction')" title="Place Junction node (J)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#bdbdbd" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="2" x2="12" y2="7"/><line x1="22" y1="12" x2="17" y2="12"/><line x1="12" y1="22" x2="12" y2="17"/></svg>
+    <span class="tlabel">Junction</span>
+  </button>
+  <button class="tool-btn" id="tool-diversion" onclick="setMode('diversion')" title="Place Diversion node (D)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2"><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)"/></svg>
+    <span class="tlabel">Diversion</span>
+  </button>
+  <button class="tool-btn" id="tool-aquifer" onclick="setMode('aquifer')" title="Place Aquifer node (A)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#a1887f" stroke-width="2"><ellipse cx="12" cy="15" rx="9" ry="5"/><path d="M3 15L3 10Q12 5 21 10L21 15"/><path d="M6 12Q12 9 18 12" stroke-dasharray="2,2"/></svg>
+    <span class="tlabel">Aquifer</span>
+  </button>
+  <button class="tool-btn" id="tool-demand" onclick="setMode('demand')" title="Place Demand Site node (M)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#ef5350" stroke-width="2"><polygon points="12,3 22,21 2,21"/><line x1="12" y1="10" x2="12" y2="15"/><circle cx="12" cy="18" r="1" fill="#ef5350"/></svg>
+    <span class="tlabel">Demand</span>
+  </button>
+  <div class="tsep"></div>
+  <div class="tsl">Link</div>
+  <button class="tool-btn" id="tool-connect" onclick="setConnectMode()" title="Connect nodes (C)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/><line x1="8" y1="12" x2="16" y2="12"/><path d="M13 9l3 3-3 3"/></svg>
+    <span class="tlabel">Connect</span>
+  </button>
+  <div class="tsep"></div>
+  <div class="tsl">Node</div>
+  <button class="tool-btn" id="tool-delete-sel" onclick="deleteSelected()" disabled
+    style="opacity:.3;cursor:not-allowed" title="Delete selected node (Del)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2">
+      <polyline points="3,6 21,6"/><path d="M5 6l1 14h12l1-14M10 6V4h4v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+    <span class="tlabel" style="color:var(--red)">Delete</span>
+  </button>
+
+  <div class="tb-spacer"></div>
+  <div class="tsep"></div>
+
+  <button class="tool-btn" onclick="openAbout()" title="About WRSS Builder">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2">
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="12" y1="8" x2="12.01" y2="8" stroke-linecap="round" stroke-width="3"/>
+      <line x1="12" y1="11" x2="12" y2="17" stroke-linecap="round"/>
+    </svg>
+    <span class="tlabel">About</span>
+  </button>
+  <button class="tool-btn" onclick="openHelp(0)" title="Help & Reference">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2.5-2.5 4" stroke-linecap="round"/>
+      <circle cx="12" cy="18.5" r=".8" fill="var(--text2)"/>
+    </svg>
+    <span class="tlabel">Help</span>
+  </button>
+</div>
+
+<!-- ══ MAP ══ -->
+<div id="map-container">
+  <div id="map"></div>
+  <div id="map-hint">Click on map to place object</div>
+  <div id="connect-overlay">CONNECT — click source node, then target node</div>
+</div>
+
+<!-- ══ RIGHT PANEL ══ -->
+<div id="right-panel">
+  <div class="panel-tabs">
+    <button class="panel-tab active" onclick="switchTab('properties')" id="tab-properties">Properties</button>
+    <button class="panel-tab" onclick="switchTab('nodes')" id="tab-nodes">Nodes</button>
+    <button class="panel-tab" onclick="switchTab('code')" id="tab-code">R Code</button>
+  </div>
+  <div class="tab-content active panel-body" id="tab-content-properties">
+    <div id="props-panel">
+      <div class="props-empty" id="props-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Select a node on the map<br>to view and edit its properties
+      </div>
+      <div id="props-content" style="display:none"></div>
+    </div>
+  </div>
+  <div class="tab-content panel-body" id="tab-content-nodes">
+    <div id="nodes-list" style="padding-top:4px"></div>
+  </div>
+  <div class="tab-content" id="tab-content-code" style="flex-direction:column">
+    <textarea id="code-output" readonly spellcheck="false"># Click "R Code" to generate your WRSS script.</textarea>
+    <div class="code-toolbar">
+      <button class="top-btn" onclick="generateCode()">Refresh</button>
+      <button class="top-btn" onclick="copyCode()">Copy</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- #main -->
+
+<!-- ══ STATUS BAR ══ -->
+<div id="statusbar">
+  <div class="si"><div class="sdot"></div><span id="status-mode">Mode: SELECT</span></div>
+  <div class="si">Nodes: <span id="status-nodes">0</span></div>
+  <div class="si">Connections: <span id="status-conns">0</span></div>
+  <div class="si" id="status-coords" style="margin-left:auto">Lat: — | Lng: —</div>
+</div>
+
+<!-- ══ CONNECTION MODAL ══ -->
+<div id="conn-modal" class="modal-backdrop">
+  <div class="modal-box">
+    <div class="modal-title">Connection Type</div>
+    <div class="modal-sub" id="conn-modal-sub"></div>
+    <div id="conn-options"></div>
+    <button class="modal-cancel" onclick="closeConnModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ ABOUT MODAL ══ -->
+<div id="about-modal" class="modal-backdrop" onclick="closeAbout(event)">
+  <div class="about-box" onclick="event.stopPropagation()">
+    <div class="about-header">
+      <div class="about-logo">WRSS <span>// System Builder</span></div>
+      <div class="about-tagline">Interactive graphical front-end for the WRSS R package</div>
+      <button class="about-close" onclick="closeAbout()">×</button>
+    </div>
+    <div class="about-body">
+      <div class="about-section">
+        <div class="about-section-title">What is WRSS Builder?</div>
+        <p class="about-text">
+          <b>WRSS Builder</b> is a browser-based, GIS-style graphical interface for constructing water resources system models using the
+          <code>WRSS</code> R package (<i>Water Resources System Simulator</i>). It lets hydrologists and engineers
+          visually design river basin networks — placing objects on a geographic map, setting their properties through
+          structured forms, and generating production-ready R scripts without writing a single line of code by hand.
+        </p>
+      </div>
+      <div class="about-section">
+        <div class="about-section-title">Supported Object Types</div>
+        <div class="about-pill-row">
+          <span class="about-pill river">River / Reach</span>
+          <span class="about-pill reservoir">Reservoir</span>
+          <span class="about-pill junction">Junction</span>
+          <span class="about-pill diversion">Diversion</span>
+          <span class="about-pill aquifer">Aquifer</span>
+          <span class="about-pill demand">Demand Site</span>
+        </div>
+      </div>
+      <div class="about-section">
+        <div class="about-section-title">Key Features</div>
+        <p class="about-text">
+          • <b>GIS map canvas</b> — place and drag nodes on dark CartoDB or standard OSM tiles.<br>
+          • <b>Typed connections</b> — downstream routing, supplier links, seepage, leakage, and diversion targets, each colour-coded on the map.<br>
+          • <b>Rich property forms</b> — time series cell-strip editors, 2-column matrix editors for rating curves, conditional hydropower panels, and CSV/TXT import for all data inputs.<br>
+          • <b>Live R code generation</b> — topologically sorted, fully-commented R script updated in real time.<br>
+          • <b>Floating object labels</b> — toggle node names on the map with a single checkbox.<br>
+          • <b>Contextual help</b> — inline <code>?</code> tooltips on every field explain the corresponding WRSS constructor argument.
+        </p>
+      </div>
+      <div class="about-section">
+        <div class="about-section-title">How to Use</div>
+        <p class="about-text">
+          1. Set your simulation period (start, end, interval) in the top bar.<br>
+          2. Select an object type from the left toolbar and click the map to place it.<br>
+          3. Click a node to open its Properties panel and fill in the required fields.<br>
+          4. Use <b>Connect</b> to draw typed links between nodes.<br>
+          5. Click <b>R Code</b> to generate your complete simulation script, then copy it to RStudio.
+        </p>
+      </div>
+      <div class="about-section">
+        <div class="about-section-title">Developer</div>
+        <div class="about-dev-card">
+          <div class="about-dev-avatar">RA</div>
+          <div>
+            <div class="about-dev-name">Rezgar Arabzadeh</div>
+            <div class="about-dev-sub">
+              Department of Civil and Environmental Engineering<br>
+              <b>University of Waterloo</b> — Waterloo, Ontario, Canada<br>
+              <a href="mailto:rarabzad@uwaterloo.ca">rarabzad@uwaterloo.ca</a> · 2026
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="about-footer">
+      <span>Built for the WRSS R package ecosystem</span>
+      <span>University of Waterloo · 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HELP MODAL ══ -->
+<div id="help-modal" class="modal-backdrop" onclick="closeHelp(event)">
+  <div class="help-box" onclick="event.stopPropagation()">
+    <div class="help-top">
+      <button class="help-tab-btn active" id="htab-0" onclick="helpTab(0)">Interface</button>
+      <button class="help-tab-btn" id="htab-1" onclick="helpTab(1)">Objects</button>
+      <button class="help-tab-btn" id="htab-2" onclick="helpTab(2)">Properties</button>
+      <button class="help-tab-btn" id="htab-3" onclick="helpTab(3)">Connections</button>
+      <button class="help-tab-btn" id="htab-4" onclick="helpTab(4)">R Code</button>
+      <button class="help-close" onclick="closeHelp()">×</button>
+    </div>
+    <div class="help-body" id="help-body"></div>
+  </div>
+</div>
+
+<!-- ══ SMART FLOATING TOOLTIP ══ -->
+<div id="hq-tip"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// SMART TOOLTIP — viewport-aware, JS-driven
+// ══════════════════════════════════════════════════
+(function(){
+  const tip = document.getElementById('hq-tip');
+  const PAD = 12; // minimum gap from any viewport edge (px)
+  let hideTimer = null;
+
+  function showTip(btn) {
+    clearTimeout(hideTimer);
+    const text = btn.getAttribute('data-tip');
+    if (!text) return;
+
+    tip.textContent = text;
+
+    // Place off-screen first so offsetWidth/Height are accurate
+    tip.style.left = '-9999px';
+    tip.style.top  = '-9999px';
+    tip.classList.add('visible');
+
+    // After the browser has painted and we can measure…
+    requestAnimationFrame(function() {
+      const btnR = btn.getBoundingClientRect();
+      const tw   = tip.offsetWidth;
+      const th   = tip.offsetHeight;
+      const vw   = window.innerWidth;
+      const vh   = window.innerHeight;
+
+      let left, top;
+
+      // ── Horizontal placement ──
+      // Prefer: right of button
+      left = btnR.right + 10;
+      if (left + tw + PAD > vw) {
+        // Try: left of button
+        left = btnR.left - tw - 10;
+      }
+      // Hard clamp inside viewport
+      left = Math.max(PAD, Math.min(left, vw - tw - PAD));
+
+      // ── Vertical placement ──
+      // Vertically centred on the button
+      top = btnR.top + btnR.height / 2 - th / 2;
+      // Hard clamp inside viewport
+      top = Math.max(PAD, Math.min(top, vh - th - PAD));
+
+      tip.style.left = left + 'px';
+      tip.style.top  = top  + 'px';
+    });
+  }
+
+  function hideTip() {
+    hideTimer = setTimeout(function() {
+      tip.classList.remove('visible');
+    }, 80);
+  }
+
+  // Use event delegation on document so dynamically-rendered .hq buttons work
+  document.addEventListener('mouseover', function(e) {
+    const btn = e.target.closest('.hq');
+    if (btn) showTip(btn);
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    const btn = e.target.closest('.hq');
+    if (btn) {
+      // Only hide if we're actually leaving the button
+      const rel = e.relatedTarget;
+      if (!rel || !btn.contains(rel)) hideTip();
+    }
+  });
+
+  // Hide on scroll or resize so it never gets stranded
+  window.addEventListener('scroll', hideTip, true);
+  window.addEventListener('resize', hideTip);
+})();
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let nodes=[],connections=[],selectedNode=null,currentMode='select';
+let connPendingSource=null;
+let nodeCounter={river:0,reservoir:0,junction:0,diversion:0,aquifer:0,demand:0};
+let labelsVisible=false, labelMarkers={};
+
+const TM={
+  river:    {color:'#4fc3f7',label:'River',     short:'Rv'},
+  reservoir:{color:'#2196f3',label:'Reservoir', short:'Rs'},
+  junction: {color:'#bdbdbd',label:'Junction',  short:'J' },
+  diversion:{color:'#ff9800',label:'Diversion', short:'Dv'},
+  aquifer:  {color:'#a1887f',label:'Aquifer',   short:'Aq'},
+  demand:   {color:'#ef5350',label:'Demand',    short:'D' },
+};
+const CC={downstream:'#00d4ff',supplier:'#39d353',seepageObject:'#9c27b0',leakageObject:'#ff9800',divertObject:'#ff5722'};
+
+// ══════════════════════════════════════════════════
+// MAP
+// ══════════════════════════════════════════════════
+const map=L.map('map',{zoomControl:true});
+const darkTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:20});
+const lightTiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19});
+let darkBg=true;
+darkTiles.addTo(map);
+map.setView([36,47],7);
+map.on('mousemove',e=>{document.getElementById('status-coords').textContent=`Lat:${e.latlng.lat.toFixed(5)} | Lng:${e.latlng.lng.toFixed(5)}`;});
+map.on('click',e=>{if(currentMode==='select'||currentMode==='connect')return;placeNode(currentMode,e.latlng);});
+
+function toggleBg(){
+  darkBg=!darkBg;
+  const btn=document.getElementById('btn-bg');
+  if(darkBg){lightTiles.remove();darkTiles.addTo(map);btn.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="14" height="14" rx="2"/><path d="M1 6h14M6 1v14"/></svg> Map BG';btn.classList.add('active');}
+  else{darkTiles.remove();lightTiles.addTo(map);btn.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="14" height="14" rx="2"/><path d="M1 6h14M6 1v14"/></svg> Dark BG';btn.classList.remove('active');}
+}
+
+// ══════════════════════════════════════════════════
+// MARKERS
+// ══════════════════════════════════════════════════
+function mSVG(type,sel=false){
+  const c=TM[type].color,g=sel?`filter:drop-shadow(0 0 6px ${c});`:'';
+  return{
+    river:`<svg width="32" height="32" viewBox="0 0 32 32" style="${g}"><circle cx="16" cy="16" r="13" fill="${c}22" stroke="${c}" stroke-width="2"/><path d="M8 16C10 13 13 19 16 16S22 13 24 16" stroke="${c}" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>`,
+    reservoir:`<svg width="34" height="34" viewBox="0 0 34 34" style="${g}"><polygon points="17,4 30,28 4,28" fill="${c}33" stroke="${c}" stroke-width="2" stroke-linejoin="round"/><rect x="9" y="28" width="16" height="3" fill="${c}" opacity=".5" rx="1"/></svg>`,
+    junction:`<svg width="28" height="28" viewBox="0 0 28 28" style="${g}"><circle cx="14" cy="14" r="10" fill="${c}22" stroke="${c}" stroke-width="2"/><circle cx="14" cy="14" r="4" fill="${c}"/></svg>`,
+    diversion:`<svg width="32" height="32" viewBox="0 0 32 32" style="${g}"><rect x="6" y="6" width="20" height="20" rx="2" fill="${c}22" stroke="${c}" stroke-width="2" transform="rotate(45 16 16)"/></svg>`,
+    aquifer:`<svg width="34" height="28" viewBox="0 0 34 28" style="${g}"><ellipse cx="17" cy="20" rx="14" ry="7" fill="${c}22" stroke="${c}" stroke-width="2"/><path d="M3 20L3 14Q17 7 31 14L31 20" fill="${c}11" stroke="${c}" stroke-width="1.5"/><path d="M8 17Q17 13 26 17" stroke="${c}" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/></svg>`,
+    demand:`<svg width="30" height="34" viewBox="0 0 30 34" style="${g}"><polygon points="15,2 28,30 2,30" fill="${c}33" stroke="${c}" stroke-width="2" stroke-linejoin="round"/><line x1="15" y1="12" x2="15" y2="21" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/><circle cx="15" cy="25" r="2" fill="${c}"/></svg>`,
+  }[type]||'';
+}
+function mkIcon(type,sel=false){
+  const sz={river:[32,32],reservoir:[34,34],junction:[28,28],diversion:[32,32],aquifer:[34,28],demand:[30,34]}[type]||[30,30];
+  return L.divIcon({html:mSVG(type,sel),className:'wrss-m',iconSize:sz,iconAnchor:[sz[0]/2,sz[1]/2]});
+}
+
+// ══════════════════════════════════════════════════
+// NODE MANAGEMENT
+// ══════════════════════════════════════════════════
+function defProps(type,name){
+  switch(type){
+    case 'river':     return{name,discharge:[],seepageFraction:'',priority:''};
+    case 'reservoir': return{name,type:'storage',netEvaporation:[],seepageFraction:'',deadStorage:'',capacity:'',storageAreaTable:[],storageElevationTable:[],dischargeElevationTable:[],initialStorage:'',priority:'',installedCapacity:'',efficiency:[],designHeadMin:'',designHeadMax:'',designFlowMin:'',designFlowMax:'',turbineAxisElevation:'',submerged:'FALSE',loss:'',penstockDiameter:'',penstockLength:'',penstockRoughness:''};
+    case 'junction':  return{name};
+    case 'diversion': return{name,capacity:'',priority:''};
+    case 'aquifer':   return{name,area:'',volume:'',rechargeTS:[],leakageFraction:'',initialStorage:'',Sy:'0.1',priority:''};
+    case 'demand':    return{name,demandInputMode:'demandTS',demandTS:[],waterUseRate:'',waterVariation:[],cropArea:'',returnFlowFraction:'',priority:''};
+    default:return{name};
+  }
+}
+
+function placeNode(type,latlng){
+  nodeCounter[type]++;
+  const id=`${TM[type].short}${nodeCounter[type]}`,varName=`${type}${nodeCounter[type]}`;
+  const node={id,varName,type,latlng,props:defProps(type,id),marker:null,connections:[]};
+  const marker=L.marker([latlng.lat,latlng.lng],{icon:mkIcon(type),draggable:true}).addTo(map);
+  marker.on('click',e=>{L.DomEvent.stopPropagation(e);currentMode==='connect'?handleConnClick(node):selectNode(node);});
+  marker.on('dragend',()=>{node.latlng=marker.getLatLng();redrawConns(node);refreshLabel(node);});
+  marker.bindTooltip(`<b>${id}</b><br><span style="color:#8b949e;font-size:10px">${TM[type].label}</span>`,{direction:'top',className:'wrss-tooltip',offset:[0,-16]});
+  node.marker=marker;nodes.push(node);
+  updateStatus();updateNodesList();selectNode(node);setMode('select');showLabel(node);
+}
+
+function selectNode(node){
+  if(selectedNode)selectedNode.marker.setIcon(mkIcon(selectedNode.type,false));
+  selectedNode=node;
+  if(node){node.marker.setIcon(mkIcon(node.type,true));renderProps(node);switchTab('properties');}
+  setDelBtnState(!!node);updateNodesList();
+}
+
+function deleteNode(node){
+  if(!node)return;
+  connections=connections.filter(c=>{
+    if(c.from.id===node.id||c.to.id===node.id){if(c.line)map.removeLayer(c.line);if(c.arrow)map.removeLayer(c.arrow);return false;}
+    return true;
+  });
+  removeLabel(node.id);map.removeLayer(node.marker);nodes=nodes.filter(n=>n.id!==node.id);
+  selectedNode=null;
+  document.getElementById('props-content').style.display='none';
+  document.getElementById('props-empty').style.display='';
+  setDelBtnState(false);updateStatus();updateNodesList();
+}
+
+function deleteSelected(){if(selectedNode)deleteNode(selectedNode);}
+
+function setDelBtnState(on){
+  const b=document.getElementById('tool-delete-sel');if(!b)return;
+  b.disabled=!on;b.style.opacity=on?'1':'0.3';b.style.cursor=on?'pointer':'not-allowed';
+}
+
+function clearAll(){
+  if(nodes.length>0&&!confirm('Clear all nodes and connections?'))return;
+  connections.forEach(c=>{if(c.line)map.removeLayer(c.line);if(c.arrow)map.removeLayer(c.arrow);});
+  nodes.forEach(n=>map.removeLayer(n.marker));
+  Object.values(labelMarkers).forEach(m=>map.removeLayer(m));
+  nodes=[];connections=[];selectedNode=null;labelMarkers={};
+  nodeCounter={river:0,reservoir:0,junction:0,diversion:0,aquifer:0,demand:0};
+  document.getElementById('props-content').style.display='none';
+  document.getElementById('props-empty').style.display='';
+  setDelBtnState(false);updateStatus();updateNodesList();
+}
+
+// ══════════════════════════════════════════════════
+// LABEL MARKERS
+// ══════════════════════════════════════════════════
+function toggleLabels(on){
+  labelsVisible=on;
+  if(on)nodes.forEach(n=>showLabel(n));
+  else{Object.values(labelMarkers).forEach(m=>map.removeLayer(m));labelMarkers={};}
+}
+function showLabel(node){
+  if(!labelsVisible)return;
+  if(labelMarkers[node.id])map.removeLayer(labelMarkers[node.id]);
+  const meta=TM[node.type],sz={river:[32,32],reservoir:[34,34],junction:[28,28],diversion:[32,32],aquifer:[34,28],demand:[30,34]}[node.type]||[30,30];
+  const lbl=L.marker([node.latlng.lat,node.latlng.lng],{
+    icon:L.divIcon({
+      html:`<div style="background:rgba(13,17,23,.82);border:1px solid ${meta.color}66;border-radius:4px;padding:2px 7px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:${meta.color};white-space:nowrap;pointer-events:none;transform:translateX(-50%)">${node.props.name||node.id}</div>`,
+      className:'',iconSize:[0,0],iconAnchor:[0,-(Math.ceil(sz[1]/2)+4)]
+    }),interactive:false,keyboard:false
+  });
+  lbl.addTo(map);labelMarkers[node.id]=lbl;
+}
+function refreshLabel(node){if(labelsVisible)showLabel(node);}
+function removeLabel(id){if(labelMarkers[id]){map.removeLayer(labelMarkers[id]);delete labelMarkers[id];}}
+
+// ══════════════════════════════════════════════════
+// CONNECTIONS
+// ══════════════════════════════════════════════════
+const CTYPES={
+  downstream:   {label:'Downstream',   desc:'outflow routes to target',          app:['river','reservoir','junction','diversion','aquifer','demand']},
+  supplier:     {label:'Supplier',     desc:'this node supplies a demand site',  app:['river','reservoir','aquifer','diversion']},
+  seepageObject:{label:'Seepage To',   desc:'seepage volume flows to target',    app:['river','reservoir']},
+  leakageObject:{label:'Leakage To',   desc:'aquifer leakage flows to target',   app:['aquifer']},
+  divertObject: {label:'Divert To',    desc:'diverted volume flows to target',   app:['diversion']},
+};
+
+function setConnectMode(){
+  currentMode='connect';connPendingSource=null;
+  document.getElementById('connect-overlay').style.display='block';
+  document.getElementById('map-hint').classList.add('hidden');
+  updateToolBtns();document.getElementById('status-mode').textContent='CONNECT — click source node';
+}
+function handleConnClick(node){
+  if(!connPendingSource){connPendingSource=node;node.marker.setIcon(mkIcon(node.type,true));document.getElementById('connect-overlay').textContent=`CONNECT — Source: ${node.id} | Click TARGET`;}
+  else{if(connPendingSource.id===node.id){connPendingSource.marker.setIcon(mkIcon(connPendingSource.type));connPendingSource=null;return;}openConnModal(connPendingSource,node);}
+}
+function openConnModal(src,tgt){
+  document.getElementById('conn-modal-sub').textContent=`${src.id} → ${tgt.id}`;
+  let opts=Object.entries(CTYPES).filter(([,v])=>v.app.includes(src.type));
+  if(tgt.type==='demand')opts=[['supplier',CTYPES.supplier],...opts.filter(([k])=>k!=='supplier')];
+  const con=document.getElementById('conn-options');con.innerHTML='';
+  opts.forEach(([key,val])=>{const d=document.createElement('div');d.className='modal-opt';d.innerHTML=`<div class="modal-opt-title">${val.label}</div><div class="modal-opt-desc">${val.desc}</div>`;d.onclick=()=>{createConn(src,tgt,key);closeConnModal();};con.appendChild(d);});
+  document.getElementById('conn-modal').classList.add('open');
+}
+function closeConnModal(){
+  document.getElementById('conn-modal').classList.remove('open');
+  if(connPendingSource){connPendingSource.marker.setIcon(mkIcon(connPendingSource.type));connPendingSource=null;}
+  setMode('select');
+}
+function mkArrow(from,to,color){
+  const midLat=(from.lat+to.lat)/2,midLng=(from.lng+to.lng)/2,ang=Math.atan2(to.lat-from.lat,to.lng-from.lng)*180/Math.PI;
+  return L.marker([midLat,midLng],{icon:L.divIcon({html:`<svg width="16" height="16" viewBox="0 0 16 16" style="transform:rotate(${-ang+90}deg)"><polygon points="8,0 13,12 8,9 3,12" fill="${color}" opacity=".9"/></svg>`,className:'',iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,keyboard:false});
+}
+function createConn(src,tgt,type){
+  if(connections.find(c=>c.from.id===src.id&&c.to.id===tgt.id&&c.type===type))return;
+  const clr=CC[type]||'#aaa';
+  const line=L.polyline([src.latlng,tgt.latlng],{color:clr,weight:2.5,opacity:.85,dashArray:type==='downstream'?null:'6,4'}).addTo(map);
+  const arrow=mkArrow(src.latlng,tgt.latlng,clr);arrow.addTo(map);
+  const conn={id:Date.now(),from:src,to:tgt,type,line,arrow};
+  connections.push(conn);src.connections.push(conn);tgt.connections.push(conn);
+  src.marker.setIcon(mkIcon(src.type));connPendingSource=null;
+  updateStatus();if(selectedNode)renderProps(selectedNode);
+}
+function deleteConn(id){
+  const conn=connections.find(c=>c.id===id);if(!conn)return;
+  if(conn.line)map.removeLayer(conn.line);if(conn.arrow)map.removeLayer(conn.arrow);
+  connections=connections.filter(c=>c.id!==id);
+  nodes.forEach(n=>{n.connections=n.connections.filter(c=>c.id!==id);});
+  updateStatus();if(selectedNode)renderProps(selectedNode);
+}
+function redrawConns(node){
+  connections.forEach(c=>{
+    if(c.from.id===node.id||c.to.id===node.id){
+      c.line.setLatLngs([c.from.latlng,c.to.latlng]);
+      if(c.arrow){map.removeLayer(c.arrow);c.arrow=mkArrow(c.from.latlng,c.to.latlng,CC[c.type]||'#aaa');c.arrow.addTo(map);}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+// MATRIX WIDGET
+// ══════════════════════════════════════════════════
+function matrixWidget(nid,key,c1,c2){
+  const node=nodes.find(n=>n.id===nid),data=(node?node.props[key]:[])||[],uid=`mw-${nid}-${key}`;
+  let rows='';
+  data.forEach((r,i)=>{rows+=`<div class="mw-row"><input type="number" step="any" value="${r&&r[0]!==null?r[0]:''}" placeholder="—" onchange="mxSet('${nid}','${key}',${i},0,this.value)"/><input type="number" step="any" value="${r&&r[1]!==null?r[1]:''}" placeholder="—" onchange="mxSet('${nid}','${key}',${i},1,this.value)"/><button class="dr" onclick="mxDel('${nid}','${key}',${i})">×</button></div>`;});
+  return `<div class="matrix-widget"><div class="mw-header"><span>${c1}</span><span>${c2}</span><span></span></div><div class="mw-rows" id="${uid}">${rows||`<div class="mw-empty">No rows — add or import below</div>`}</div><div class="mw-actions"><button class="act-btn" onclick="mxAdd('${nid}','${key}')">+ Row</button><label class="imp-label">⬆ CSV/TXT<input type="file" accept=".csv,.txt" onchange="mxImport(event,'${nid}','${key}')"/></label><span class="row-count" id="${uid}-cnt">${data.length} rows</span></div></div>`;
+}
+function mxSet(nid,key,row,col,val){const node=nodes.find(n=>n.id===nid);if(!node)return;if(!node.props[key])node.props[key]=[];if(!node.props[key][row])node.props[key][row]=[null,null];node.props[key][row][col]=val===''?null:parseFloat(val);const el=document.getElementById(`mw-${nid}-${key}-cnt`);if(el)el.textContent=`${node.props[key].length} rows`;}
+function mxAdd(nid,key){const node=nodes.find(n=>n.id===nid);if(!node)return;if(!node.props[key])node.props[key]=[];node.props[key].push([null,null]);renderProps(node);}
+function mxDel(nid,key,row){const node=nodes.find(n=>n.id===nid);if(!node)return;node.props[key].splice(row,1);renderProps(node);}
+function mxImport(evt,nid,key){const node=nodes.find(n=>n.id===nid);if(!node)return;const f=evt.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsWith('#'));const data=[];lines.forEach(l=>{const p=l.trim().split(/[\s,;\t]+/);if(p.length>=2){const a=parseFloat(p[0]),b=parseFloat(p[1]);if(!isNaN(a)&&!isNaN(b))data.push([a,b]);}});node.props[key]=data;renderProps(node);};r.readAsText(f);}
+
+// ══════════════════════════════════════════════════
+// TIME SERIES WIDGET
+// ══════════════════════════════════════════════════
+function tsWidget(nid,key,unit){
+  const node=nodes.find(n=>n.id===nid),data=(node?node.props[key]:[])||[],uid=`ts-${nid}-${key}`;
+  let cells='';
+  data.forEach((v,i)=>{cells+=`<div class="ts-cell"><div class="ts-idx">${i+1}</div><input type="number" step="any" value="${v!==null&&v!==undefined?v:''}" placeholder="—" onchange="tsSet('${nid}','${key}',${i},this.value)"/><button class="ts-del" onclick="tsDel('${nid}','${key}',${i})">×</button></div>`;});
+  return `<div class="ts-widget"><div class="ts-scroll"><div class="ts-cells" id="${uid}">${cells||`<div class="ts-empty">No values — add or import</div>`}</div></div><div class="ts-actions"><button class="act-btn" onclick="tsAdd('${nid}','${key}',1)">+ Cell</button><button class="act-btn" onclick="tsAdd('${nid}','${key}',12)">+12</button><button class="act-btn" onclick="tsAdd('${nid}','${key}',52)">+52</button><label class="imp-label">⬆ CSV/TXT<input type="file" accept=".csv,.txt" onchange="tsImport(event,'${nid}','${key}')"/></label><span class="row-count" id="${uid}-cnt">${data.length} val${unit?' ('+unit+')':''}</span></div></div>`;
+}
+function tsSet(nid,key,idx,val){const node=nodes.find(n=>n.id===nid);if(!node)return;if(!node.props[key])node.props[key]=[];node.props[key][idx]=val===''?null:parseFloat(val);const el=document.getElementById(`ts-${nid}-${key}-cnt`);if(el)el.textContent=`${node.props[key].length} val`;}
+function tsAdd(nid,key,n){const node=nodes.find(nd=>nd.id===nid);if(!node)return;if(!node.props[key])node.props[key]=[];for(let i=0;i<n;i++)node.props[key].push(null);renderProps(node);}
+function tsDel(nid,key,idx){const node=nodes.find(n=>n.id===nid);if(!node)return;node.props[key].splice(idx,1);renderProps(node);}
+function tsImport(evt,nid,key){const node=nodes.find(n=>n.id===nid);if(!node)return;const f=evt.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const vals=[];e.target.result.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsWith('#')).forEach(l=>{l.trim().split(/[\s,;\t]+/).forEach(t=>{const v=parseFloat(t);if(!isNaN(v))vals.push(v);});});node.props[key]=vals;renderProps(node);};r.readAsText(f);}
+
+// ══════════════════════════════════════════════════
+// PROPERTY HELPERS
+// ══════════════════════════════════════════════════
+function hq(tip){
+  const esc=tip.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return `<button class="hq" data-tip="${esc}" tabindex="-1">?</button>`;
+}
+
+function pi(node,key,label,placeholder,req,hint,tip){
+  const v=node.props[key]!==undefined&&node.props[key]!==null?node.props[key]:'';
+  const badge=req==='req'?'<span class="req">required</span>':req==='opt'?'<span class="opt">optional</span>':'';
+  return `<div class="prop-row">
+    <div class="prop-label">
+      <div class="prop-label-left"><span>${label}</span>${tip?hq(tip):''}  </div>
+      ${badge}
+    </div>
+    <input class="prop-input" type="text" value="${v}" placeholder="${placeholder||''}" onchange="upd('${node.id}','${key}',this.value)"/>
+    ${hint?`<div class="prop-hint">${hint}</div>`:''}
+  </div>`;
+}
+function psel(node,key,label,opts,tip){
+  const v=node.props[key]||opts[0].v;
+  return `<div class="prop-row">
+    <div class="prop-label"><div class="prop-label-left"><span>${label}</span>${tip?hq(tip):''}</div></div>
+    <select class="prop-select" onchange="updRefresh('${node.id}','${key}',this.value)">
+      ${opts.map(o=>`<option value="${o.v}" ${v===o.v?'selected':''}>${o.l}</option>`).join('')}
+    </select>
+  </div>`;
+}
+function connSection(node){
+  const nc=connections.filter(c=>c.from.id===node.id||c.to.id===node.id);
+  let h=`<div class="prop-group"><div class="pgl">Connections (${nc.length}) ${hq('Lists all connections for this node. Click any row to delete that connection. Use the Connect tool (C) in the toolbar to add new connections.')}</div>`;
+  if(!nc.length)h+=`<div style="font-size:11px;color:var(--text2);padding:4px 0">None — use Connect tool.</div>`;
+  else nc.forEach(c=>{const isFrom=c.from.id===node.id,other=isFrom?c.to:c.from,clr=CC[c.type]||'#aaa';h+=`<div class="conn-item" onclick="deleteConn(${c.id})"><div class="conn-dot" style="background:${clr}"></div><div><div>${isFrom?'→':'←'} ${other.id}</div><div class="conn-type">${c.type}</div></div><div class="conn-del">×</div></div>`;});
+  return h+'</div>';
+}
+function upd(nid,key,val){const node=nodes.find(n=>n.id===nid);if(!node)return;node.props[key]=val;node.marker.setTooltipContent(`<b>${node.props.name||node.id}</b><br><span style="color:#8b949e;font-size:10px">${TM[node.type].label}</span>`);refreshLabel(node);}
+function updRefresh(nid,key,val){upd(nid,key,val);const node=nodes.find(n=>n.id===nid);if(node)renderProps(node);}
+
+// ══════════════════════════════════════════════════
+// RENDER PROPERTIES
+// ══════════════════════════════════════════════════
+function renderProps(node){
+  document.getElementById('props-empty').style.display='none';
+  const content=document.getElementById('props-content');content.style.display='block';content.innerHTML='';
+  const meta=TM[node.type];
+  const hdr=document.createElement('div');hdr.className='node-header';
+  hdr.innerHTML=`<div class="node-type-badge" style="background:${meta.color}22;border:1px solid ${meta.color}44">${mSVG(node.type)}</div><div><div class="node-title">${node.props.name||node.id}</div><div class="node-id">${node.type.toUpperCase()} · ${node.varName}</div></div>`;
+  content.appendChild(hdr);
+  const form=document.createElement('div');
+
+  // ── RIVER ──────────────────────────────────────
+  if(node.type==='river'){
+    const sc=connections.filter(c=>c.from.id===node.id&&c.type==='seepageObject');
+    form.innerHTML=`
+    <div class="prop-group"><div class="pgl">Basic</div>
+      ${pi(node,'name','name','River / reach name','opt',false,'A descriptive label for this river or reach. Used as the name= argument in createRiver() and as the R variable display label.')}
+      ${pi(node,'priority','priority [1–99]','Inf','opt','Lower number = higher supply priority','Integer supply priority (1 = highest). When multiple sources compete to supply a demand, lower priority value wins. Default: Inf (lowest priority).')}
+    </div>
+    <div class="prop-group">
+      <div class="pgl">discharge (MCM) <span class="badge badge-ts">time series</span> ${hq('Time series of river discharge at the upstream node, in MCM (Million Cubic Metres). One value per simulation interval. Use + Cell to add manually, +12/+52 for monthly/weekly batches, or import a flat CSV/TXT file.')}</div>
+      ${tsWidget(node.id,'discharge','MCM')}
+    </div>
+    <div class="prop-group"><div class="pgl">Seepage ${hq('Seepage causes a fraction of river discharge to leave the system (or route to a seepageObject). Set seepageFraction, then use Connect → Seepage To to designate the receiving object.')}</div>
+      ${pi(node,'seepageFraction','seepageFraction [0, 1]','e.g. 0.05','opt','Seepage volume = seepageFraction × discharge','Fraction of discharge lost to seepage each interval. Must be between 0 and 1. The lost volume routes to seepageObject if one is connected.')}
+      <div style="font-size:11px;color:${sc.length?'#39d353':'var(--text2)'};padding:2px 0">
+        seepageObject: ${sc.length?`<b style="color:var(--text)">${sc[0].to.id}</b>`:'not set — use <b>Connect → Seepage To</b>'}
+      </div>
+    </div>
+    ${connSection(node)}`;
+    content.appendChild(form);delBtn(content,node,'River');return;
+  }
+
+  // ── RESERVOIR ──────────────────────────────────
+  if(node.type==='reservoir'){
+    const isH=(node.props.type||'storage')==='hydropower';
+    const sc=connections.filter(c=>c.from.id===node.id&&c.type==='seepageObject');
+    form.innerHTML=`
+    <div class="prop-group"><div class="pgl">Basic</div>
+      ${psel(node,'type','type',[{v:'storage',l:'storage'},{v:'hydropower',l:'hydropower'}],'Reservoir operating mode. "storage" — standard conservation reservoir. "hydropower" — enables the plant and penstock argument groups and the dischargeElevationTable.')}
+      ${pi(node,'name','name','Reservoir name','opt',false,'Descriptive label for this reservoir. Used in createReservoir(name=...) and as the R variable label.')}
+      ${pi(node,'priority','priority [1–99]','Inf','opt',false,'Supply priority integer. Lower value = higher priority when competing with other supply sources.')}
+      ${pi(node,'initialStorage','initialStorage (MCM)','Omit → iterates to carry-over','opt',false,'Starting reservoir storage in MCM. If omitted, WRSS iterates the simulation to find the steady-state carry-over storage automatically.')}
+    </div>
+    <div class="prop-group">
+      <div class="pgl">netEvaporation (m) <span class="badge badge-ts">time series</span> ${hq('Net evaporation depth (m) at the dam site per interval — positive = net loss, negative = net gain. Multiplied by surface area (from storageAreaTable) to compute volumetric evaporation loss. Omit or leave empty to assume zero.')}</div>
+      ${tsWidget(node.id,'netEvaporation','m')}
+    </div>
+    <div class="prop-group"><div class="pgl">Seepage ${hq('Seepage represents storage losses through the dam body or foundation. Set seepageFraction, then connect a seepageObject via Connect → Seepage To if the lost volume should route somewhere.')}</div>
+      ${pi(node,'seepageFraction','seepageFraction [0, 1]','e.g. 0.01','opt','Seepage = seepageFraction × storage','Fraction of current reservoir storage lost to seepage per interval.')}
+      <div style="font-size:11px;color:${sc.length?'#39d353':'var(--text2)'};padding:2px 0">seepageObject: ${sc.length?`<b style="color:var(--text)">${sc[0].to.id}</b>`:'not set — use <b>Connect → Seepage To</b>'}</div>
+    </div>
+    <div class="prop-group"><div class="pgl">geometry — list( … ) ${hq('The geometry list defines reservoir physical dimensions. capacity and deadStorage are always required. Rating curve tables (storageAreaTable, storageElevationTable) are optional but improve simulation accuracy.')}</div>
+      ${pi(node,'capacity','capacity (MCM)','Max storage volume','req',false,'Maximum active storage of the reservoir in MCM. Required.')}
+      ${pi(node,'deadStorage','deadStorage (MCM)','Inactive storage below outlet','req',false,'Volume of water permanently stored below the lowest outlet level — not available for release. Required.')}
+      <div class="prop-row">
+        <div class="prop-label"><div class="prop-label-left"><span>storageAreaTable</span>${hq('Rating curve linking reservoir volume (MCM) to water surface area (Km²). Used to compute evaporation volumes. Each row is one point on the curve. Import or enter manually.')}</div><span class="opt">optional</span></div>
+        <div class="prop-hint" style="margin-bottom:5px">col 1 = volume (MCM) · col 2 = surface area (Km²)</div>
+        ${matrixWidget(node.id,'storageAreaTable','Volume (MCM)','Area (Km²)')}
+      </div>
+      <div class="prop-row">
+        <div class="prop-label"><div class="prop-label-left"><span>storageElevationTable</span>${hq('Rating curve linking reservoir volume (MCM) to water surface elevation (m). Required if you want elevation-based head calculations for hydropower or spill calculations.')}</div><span class="opt">optional</span></div>
+        <div class="prop-hint" style="margin-bottom:5px">col 1 = volume (MCM) · col 2 = elevation (m)</div>
+        ${matrixWidget(node.id,'storageElevationTable','Volume (MCM)','Elevation (m)')}
+      </div>
+    </div>
+
+    <!-- HYDROPOWER (conditional) -->
+    <div class="cond-section ${isH?'':'hidden'}" id="hydro-${node.id}">
+      <div class="prop-group">
+        <div class="pgl">geometry — dischargeElevationTable <span class="badge badge-hydro">hydropower</span> ${hq('Tailwater rating curve: discharge (cms) vs. tailwater elevation (m) at the turbine outlet. Required only when submerged = TRUE, because net head = headwater elevation − tailwater elevation.')}</div>
+        <div class="prop-hint" style="margin-bottom:5px">col 1 = discharge (cms) · col 2 = tailwater elevation (m)</div>
+        ${matrixWidget(node.id,'dischargeElevationTable','Discharge (cms)','Elevation (m)')}
+      </div>
+      <div class="prop-group">
+        <div class="pgl">plant — list( … ) <span class="badge badge-hydro">hydropower</span> ${hq('Describes the hydropower generating unit. All fields in this group are required when type = "hydropower". Power output = efficiency × ρg × flow × net_head.')}</div>
+        ${pi(node,'installedCapacity','installedCapacity (MW)','e.g. 120','req',false,'Nameplate capacity of the generating unit in megawatts. Generation is capped at this value each interval.')}
+        <div class="prop-row">
+          <div class="prop-label"><div class="prop-label-left"><span>efficiency</span>${hq('Turbine efficiency lookup table. col 1 = flow through turbine (cms), col 2 = dimensionless efficiency [0, 1]. WRSS interpolates efficiency based on actual discharge.')}</div><span class="req">required</span></div>
+          <div class="prop-hint" style="margin-bottom:5px">col 1 = discharge (cms) · col 2 = efficiency [0, 1]</div>
+          ${matrixWidget(node.id,'efficiency','Discharge (cms)','Efficiency [0,1]')}
+        </div>
+        <div class="prop-row">
+          <div class="prop-label"><div class="prop-label-left"><span>designHead min / max (m)</span>${hq('Operational head limits in metres. The turbine only generates power when net head falls within [designHeadMin, designHeadMax]. Outside this range it is shut down.')}</div><span class="req">required</span></div>
+          <div class="dual-input">
+            <input class="prop-input" type="number" step="any" placeholder="min (m)" value="${node.props.designHeadMin||''}" onchange="upd('${node.id}','designHeadMin',this.value)"/>
+            <input class="prop-input" type="number" step="any" placeholder="max (m)" value="${node.props.designHeadMax||''}" onchange="upd('${node.id}','designHeadMax',this.value)"/>
+          </div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-label"><div class="prop-label-left"><span>designFlow min / max (cms)</span>${hq('Turbine flow limits in cubic metres per second. The turbine operates only when discharge is within [designFlowMin, designFlowMax]. Excess flow spills over.')}</div><span class="req">required</span></div>
+          <div class="dual-input">
+            <input class="prop-input" type="number" step="any" placeholder="min (cms)" value="${node.props.designFlowMin||''}" onchange="upd('${node.id}','designFlowMin',this.value)"/>
+            <input class="prop-input" type="number" step="any" placeholder="max (cms)" value="${node.props.designFlowMax||''}" onchange="upd('${node.id}','designFlowMax',this.value)"/>
+          </div>
+        </div>
+        ${pi(node,'turbineAxisElevation','turbineAxisElevation (m)','e.g. 450','req',false,'Elevation of the turbine centre line in metres. Used to compute net head when submerged = TRUE.')}
+        ${psel(node,'submerged','submerged',[{v:'FALSE',l:'FALSE — free-flow discharge'},{v:'TRUE',l:'TRUE — submerged turbine'}],'Whether the turbine outlet is submerged. If TRUE, tailwater elevation from dischargeElevationTable reduces net head. Requires turbineAxisElevation and dischargeElevationTable.')}
+        ${pi(node,'loss','loss (m)','Head losses (m)','opt',false,'Minor hydraulic losses (friction, bends, valves) in the penstock, in metres. Subtracted from gross head before power calculation.')}
+      </div>
+      <div class="prop-group">
+        <div class="pgl">penstock — list( … ) <span class="badge badge-opt">optional</span> ${hq('Penstock (pressure pipe) dimensions used to compute friction head loss via the Hazen-Williams formula. All three fields must be provided together if any one is used.')}</div>
+        ${pi(node,'penstockDiameter','diameter (m)','Penstock internal diameter','opt',false,'Internal diameter of the penstock in metres.')}
+        ${pi(node,'penstockLength','length (m)','Penstock length','opt',false,'Total length of the penstock from intake to turbine in metres.')}
+        ${pi(node,'penstockRoughness','roughness','Hazen-Williams C coefficient','opt',false,'Hazen-Williams roughness coefficient C. Typical values: 140 (new steel), 120 (concrete), 100 (older pipes).')}
+      </div>
+    </div>
+    ${connSection(node)}`;
+    content.appendChild(form);delBtn(content,node,'Reservoir');return;
+  }
+
+  // ── JUNCTION ───────────────────────────────────
+  if(node.type==='junction'){
+    form.innerHTML=`<div class="prop-group"><div class="pgl">Basic ${hq('A junction collects inflows from multiple upstream nodes and routes the combined volume to one downstream object. No water is consumed or stored.')}</div>${pi(node,'name','name','Junction name','opt',false,'Label for this confluence point. Used in createJunction(name=...).')}</div>${connSection(node)}`;
+    content.appendChild(form);delBtn(content,node,'Junction');return;
+  }
+
+  // ── DIVERSION ──────────────────────────────────
+  if(node.type==='diversion'){
+    form.innerHTML=`
+    <div class="prop-group"><div class="pgl">Basic ${hq('A diversion dam or headworks splits incoming flow: up to capacity (CMS) is diverted to a divertObject (canal, demand site, reservoir), and the remainder passes downstream.')}</div>
+      ${pi(node,'name','name','Diversion name','opt',false,'Label for this diversion structure.')}
+      ${pi(node,'capacity','capacity (CMS)','Maximum diversion rate','req',false,'Maximum instantaneous diversion rate in cubic metres per second (CMS). Flow above this limit passes downstream.')}
+      ${pi(node,'priority','priority [1–99]','Inf','opt',false,'Supply priority when competing with other upstream diversions.')}
+    </div>${connSection(node)}`;
+    content.appendChild(form);delBtn(content,node,'Diversion');return;
+  }
+
+  // ── AQUIFER ────────────────────────────────────
+  if(node.type==='aquifer'){
+    const lc=connections.filter(c=>c.from.id===node.id&&c.type==='leakageObject');
+    form.innerHTML=`
+    <div class="prop-group"><div class="pgl">Basic ${hq('A lumped groundwater aquifer. Receives recharge inputs, loses water through leakage, and can supply demand sites via supplier connections.')}</div>
+      ${pi(node,'name','name','Aquifer name','opt',false,'Descriptive label for this groundwater body.')}
+      ${pi(node,'area','area (Km²)','Aquifer horizontal area','req',false,'Horizontal area of the aquifer in Km². Used with Sy (specific yield) to compute storable volume.')}
+      ${pi(node,'volume','volume (MCM)','Total aquifer volume','req',false,'Total saturated volume of the aquifer in MCM. Defines the maximum possible storage.')}
+      ${pi(node,'Sy','Sy — specific yield','0.1','opt','Default: 0.1','Specific yield (dimensionless, 0–1). Fraction of aquifer volume that drains freely under gravity. Default is 0.1 (typical for unconfined sand/gravel).')}
+      ${pi(node,'initialStorage','initialStorage (MCM)','Omit → iterates','opt',false,'Initial stored volume in MCM. If omitted, WRSS iterates to find steady-state starting storage.')}
+      ${pi(node,'priority','priority [1–99]','Inf','opt',false,'Supply priority relative to other sources serving the same demand sites.')}
+    </div>
+    <div class="prop-group">
+      <div class="pgl">rechargeTS (MCM) <span class="badge badge-ts">time series</span> ${hq('Time series of groundwater recharge per simulation interval (MCM). Represents natural recharge from precipitation, irrigation return flow, or river bed infiltration. One value per interval.')}</div>
+      ${tsWidget(node.id,'rechargeTS','MCM')}
+    </div>
+    <div class="prop-group"><div class="pgl">Leakage ${hq('Aquifer leakage represents water draining from the aquifer to another system element (e.g. a river). Set leakageFraction and then connect a leakageObject via Connect → Leakage To.')}</div>
+      ${pi(node,'leakageFraction','leakageFraction [0, 1]','e.g. 0.01','opt','Leakage = leakageFraction × storage','Fraction of current aquifer storage that leaks out per interval.')}
+      <div style="font-size:11px;color:${lc.length?'#39d353':'var(--text2)'};padding:2px 0">leakageObject: ${lc.length?`<b style="color:var(--text)">${lc[0].to.id}</b>`:'not set — use <b>Connect → Leakage To</b>'}</div>
+    </div>${connSection(node)}`;
+    content.appendChild(form);delBtn(content,node,'Aquifer');return;
+  }
+
+  // ── DEMAND ─────────────────────────────────────
+  if(node.type==='demand'){
+    const mode=node.props.demandInputMode||'demandTS',ivl=document.getElementById('sim-interval').value;
+    form.innerHTML=`
+    <div class="prop-group"><div class="pgl">Basic ${hq('A demand site represents a water consumer (agricultural, municipal, industrial). It is supplied by one or more upstream nodes connected with "Supplier" links.')}</div>
+      ${pi(node,'name','name','Demand site name','opt',false,'Label for this demand site.')}
+      ${pi(node,'returnFlowFraction','returnFlowFraction [0, 1]','e.g. 0.3','opt','Return flow = fraction × supplied volume','Fraction of supplied water returned to the downstream node as return flow. 0 = all consumed, 1 = all returned.')}
+      ${pi(node,'priority','priority [1–99]','Inf','opt',false,'Supply priority. Lower number = served first when water is scarce.')}
+    </div>
+    <div class="prop-group"><div class="pgl">Demand Input Mode ${hq('Choose how demand is specified. demandTS: supply a direct time series of required volumes (MCM) per interval. demandParams: compute demand from crop area, water-use rate, and a seasonal distribution vector.')}</div>
+      ${psel(node,'demandInputMode','mode',[{v:'demandTS',l:'demandTS — direct time series'},{v:'demandParams',l:'demandParams — area-based calc'}],'Switches between the two demand specification modes. Changing mode shows/hides the relevant input fields below.')}
+    </div>
+    ${mode==='demandTS'?`
+    <div class="prop-group">
+      <div class="pgl">demandTS (MCM) <span class="badge badge-ts">time series</span> ${hq('Direct demand time series: one value per simulation interval representing the total water requirement in MCM. This vector is passed directly to the demand site constructor.')}</div>
+      ${tsWidget(node.id,'demandTS','MCM')}
+    </div>`:`
+    <div class="prop-group">
+      <div class="pgl">demandParams — list( … ) ${hq('Area-based demand parameterisation. Total demand per interval = waterUseRate × cropArea × waterVariation[t] / 100. Useful when a pre-computed time series is unavailable.')}</div>
+      ${pi(node,'waterUseRate','waterUseRate (MCM/ha/cycle)','e.g. 0.008','req','Total water demand per hectare per cycle','Total seasonal water requirement per hectare of cultivated area in MCM/ha/cycle. Multiplied by cropArea to get total seasonal demand, then distributed using waterVariation.')}
+      ${pi(node,'cropArea','cropArea (ha)','e.g. 5000','req','Irrigated farm area in hectares','Total irrigated crop area in hectares. Combined with waterUseRate to compute total seasonal demand.')}
+      <div class="prop-row">
+        <div class="prop-label"><div class="prop-label-left"><span>waterVariation (% per ${ivl})</span>${hq('Seasonal demand distribution as percentages, one per '+ivl+'. Values must sum to 100. E.g. for monthly: [0,0,5,15,25,20,15,10,7,3,0,0]. Distributes total seasonal demand across intervals.')}</div><span class="req">required</span></div>
+        <div class="prop-hint" style="margin-bottom:5px">Percentages summing to 100 — one value per ${ivl}.</div>
+        ${tsWidget(node.id,'waterVariation','%')}
+      </div>
+    </div>`}
+    ${connSection(node)}`;
+    content.appendChild(form);delBtn(content,node,'Demand Site');return;
+  }
+  content.appendChild(form);
+}
+
+function delBtn(container,node,label){
+  const b=document.createElement('button');b.className='del-node-btn';b.textContent=`Delete ${label}`;b.onclick=()=>deleteNode(node);container.appendChild(b);
+}
+
+// ══════════════════════════════════════════════════
+// NODES LIST
+// ══════════════════════════════════════════════════
+function updateNodesList(){
+  const list=document.getElementById('nodes-list');
+  if(!nodes.length){list.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">No objects yet.<br>Select a tool and click the map.</div>`;return;}
+  list.innerHTML=nodes.map(n=>{
+    const meta=TM[n.type],isSel=selectedNode&&selectedNode.id===n.id,cc=connections.filter(c=>c.from.id===n.id||c.to.id===n.id).length;
+    return `<div class="nli ${isSel?'sel':''}" onclick="selectNode(nodes.find(x=>x.id==='${n.id}'))"><div class="nli-dot" style="background:${meta.color}"></div><div style="flex:1">${n.props.name||n.id}</div><div style="font-size:10px;color:var(--text2);margin-right:4px">${cc}c</div><div class="nli-id">${n.id}</div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
+// R CODE GENERATION
+// ══════════════════════════════════════════════════
+function toRvec(arr){if(!arr||!arr.length)return null;const v=arr.filter(x=>x!==null&&x!==undefined&&x!=='');return v.length?`c(${v.join(',')})`:`null`;}
+function toRmat(arr,c1,c2){if(!arr||!arr.length)return null;const r=arr.filter(x=>x&&x[0]!==null&&x[1]!==null);if(!r.length)return null;return `cbind(${c1}=c(${r.map(x=>x[0]).join(',')}),${c2}=c(${r.map(x=>x[1]).join(',')}))`;}
+
+function generateCode(){
+  const area=document.getElementById('sim-name').value||'MyBasin',start=document.getElementById('sim-start').value,end=document.getElementById('sim-end').value,ivl=document.getElementById('sim-interval').value;
+  const L=[];
+  L.push(`# ═══════════════════════════════════════════════════════`);
+  L.push(`# WRSS System — generated by WRSS Builder`);
+  L.push(`# Developer: Rezgar Arabzadeh, University of Waterloo, 2026`);
+  L.push(`# ═══════════════════════════════════════════════════════`);
+  L.push(`library(WRSS)\n`);
+  L.push(`# ── Simulation period`);
+  L.push(`simulation <- list(start='${start}', end='${end}', interval='${ivl}')\n`);
+  L.push(`# ── Study area`);
+  L.push(`${area} <- createArea(name='${area}', simulation=simulation)\n`);
+  L.push(`# ── Node constructors`);
+  const ord=topoSort(nodes,connections);
+  ord.forEach(n=>{
+    const dw=connections.filter(c=>c.from.id===n.id&&c.type==='downstream'),downVar=dw.length?dw[0].to.varName:null;
+    L.push(`# --- ${n.id} : ${TM[n.type].label}`);
+    if(n.type==='river'){
+      const Q=toRvec(n.props.discharge),sc=connections.filter(c=>c.from.id===n.id&&c.type==='seepageObject');
+      const a=[`  name='${n.props.name||n.id}'`];
+      if(downVar)a.push(`  downstream=${downVar}`);if(Q)a.push(`  discharge=${Q}`);if(n.props.seepageFraction)a.push(`  seepageFraction=${n.props.seepageFraction}`);if(sc.length)a.push(`  seepageObject=${sc[0].to.varName}`);if(n.props.priority)a.push(`  priority=${n.props.priority}`);
+      L.push(`${n.varName} <- createRiver(\n${a.join(',\n')}\n)\n`);
+    } else if(n.type==='reservoir'){
+      const isH=(n.props.type||'storage')==='hydropower',sc=connections.filter(c=>c.from.id===n.id&&c.type==='seepageObject'),Ev=toRvec(n.props.netEvaporation),SA=toRmat(n.props.storageAreaTable,'volume_MCM','area_Km2'),SE=toRmat(n.props.storageElevationTable,'volume_MCM','elev_m'),DE=toRmat(n.props.dischargeElevationTable,'disch_cms','elev_m'),EF=toRmat(n.props.efficiency,'disch_cms','efficiency');
+      const a=[`  type='${n.props.type||'storage'}'`,`  name='${n.props.name||n.id}'`];
+      if(n.props.priority)a.push(`  priority=${n.props.priority}`);if(downVar)a.push(`  downstream=${downVar}`);if(Ev)a.push(`  netEvaporation=${Ev}`);if(n.props.seepageFraction)a.push(`  seepageFraction=${n.props.seepageFraction}`);if(sc.length)a.push(`  seepageObject=${sc[0].to.varName}`);if(n.props.initialStorage)a.push(`  initialStorage=${n.props.initialStorage}`);
+      const gp=[`    deadStorage=${n.props.deadStorage||0}`,`    capacity=${n.props.capacity||0}`];
+      if(SA)gp.push(`    storageAreaTable=${SA}`);if(SE)gp.push(`    storageElevationTable=${SE}`);if(isH&&DE)gp.push(`    dischargeElevationTable=${DE}`);
+      a.push(`  geometry=list(\n${gp.join(',\n')}\n  )`);
+      if(isH){const pl=[];if(n.props.installedCapacity)pl.push(`    installedCapacity=${n.props.installedCapacity}`);if(EF)pl.push(`    efficiency=${EF}`);if(n.props.designHeadMin||n.props.designHeadMax)pl.push(`    designHead=c(${n.props.designHeadMin||'NA'},${n.props.designHeadMax||'NA'})`);if(n.props.designFlowMin||n.props.designFlowMax)pl.push(`    designFlow=c(${n.props.designFlowMin||'NA'},${n.props.designFlowMax||'NA'})`);if(n.props.turbineAxisElevation)pl.push(`    turbineAxisElevation=${n.props.turbineAxisElevation}`);pl.push(`    submerged=${n.props.submerged||'FALSE'}`);if(n.props.loss)pl.push(`    loss=${n.props.loss}`);if(pl.length)a.push(`  plant=list(\n${pl.join(',\n')}\n  )`);if(n.props.penstockDiameter||n.props.penstockLength||n.props.penstockRoughness){const ps=[];if(n.props.penstockDiameter)ps.push(`    diameter=${n.props.penstockDiameter}`);if(n.props.penstockLength)ps.push(`    length=${n.props.penstockLength}`);if(n.props.penstockRoughness)ps.push(`    roughness=${n.props.penstockRoughness}`);a.push(`  penstock=list(\n${ps.join(',\n')}\n  )`);}}
+      L.push(`${n.varName} <- createReservoir(\n${a.join(',\n')}\n)\n`);
+    } else if(n.type==='junction'){
+      const a=[`  name='${n.props.name||n.id}'`];if(downVar)a.push(`  downstream=${downVar}`);
+      L.push(`${n.varName} <- createJunction(\n${a.join(',\n')}\n)\n`);
+    } else if(n.type==='diversion'){
+      const dv=connections.filter(c=>c.from.id===n.id&&c.type==='divertObject'),a=[`  name='${n.props.name||n.id}'`,`  capacity=${n.props.capacity||0}`];
+      if(downVar)a.push(`  downstream=${downVar}`);if(dv.length)a.push(`  divertObject=${dv[0].to.varName}`);if(n.props.priority)a.push(`  priority=${n.props.priority}`);
+      L.push(`${n.varName} <- createDiversion(\n${a.join(',\n')}\n)\n`);
+    } else if(n.type==='aquifer'){
+      const lk=connections.filter(c=>c.from.id===n.id&&c.type==='leakageObject'),RTS=toRvec(n.props.rechargeTS),a=[`  name='${n.props.name||n.id}'`,`  area=${n.props.area||0}`,`  volume=${n.props.volume||0}`];
+      if(RTS)a.push(`  rechargeTS=${RTS}`);if(n.props.leakageFraction)a.push(`  leakageFraction=${n.props.leakageFraction}`);if(n.props.initialStorage)a.push(`  initialStorage=${n.props.initialStorage}`);a.push(`  Sy=${n.props.Sy||'0.1'}`);if(lk.length)a.push(`  leakageObject=${lk[0].to.varName}`);if(n.props.priority)a.push(`  priority=${n.props.priority}`);
+      L.push(`${n.varName} <- createAquifer(\n${a.join(',\n')}\n)\n`);
+    } else if(n.type==='demand'){
+      const sup=connections.filter(c=>c.to.id===n.id&&c.type==='supplier').map(c=>c.from.varName),dwd=connections.filter(c=>c.from.id===n.id&&c.type==='downstream'),downD=dwd.length?dwd[0].to.varName:null,mode=n.props.demandInputMode||'demandTS',a=[`  name='${n.props.name||n.id}'`];
+      if(mode==='demandTS'){const D=toRvec(n.props.demandTS);if(D)a.push(`  demandTS=${D}`);}
+      else{const WV=toRvec(n.props.waterVariation);a.push(`  demandParams=list(\n    waterUseRate=${n.props.waterUseRate||0},\n    waterVariation=${WV||'c()'},\n    cropArea=${n.props.cropArea||0}\n  )`);}
+      a.push(`  suppliers=list(${sup.join(',')})`);if(n.props.returnFlowFraction)a.push(`  returnFlowFraction=${n.props.returnFlowFraction}`);if(downD)a.push(`  downstream=${downD}`);if(n.props.priority)a.push(`  priority=${n.props.priority}`);
+      L.push(`${n.varName} <- createDemandSite(\n${a.join(',\n')}\n)\n`);
+    }
+  });
+  L.push(`# ── Add to area`);ord.forEach(n=>L.push(`${area} <- addObjectToArea(${area}, ${n.varName})`));L.push('');
+  L.push(`\n# ── Simulate`);L.push(`result <- sim(${area})`);L.push(`plot(result)`);
+  L.push(`\n# ── Performance indicators`);L.push(`# risk(result, s.const=0.9)`);L.push(`# GOF(basin=result, object=<node>, observed=<obs_ts>)`);
+  document.getElementById('code-output').value=L.join('\n');
+}
+function topoSort(nodes, conns) {
+  // ── What "must come before what" in R constructor declarations:
+  //
+  // 'downstream' edge:  stored as  from=A, to=B  meaning A's constructor has downstream=B
+  //                     → B must be declared before A  (B is prereq of A)
+  //
+  // 'supplier' edge:    stored as  from=SUPPLIER, to=DEMAND  meaning demand lists supplier
+  //                     → SUPPLIER must be declared before DEMAND
+  //                     → SUPPLIER is prereq of DEMAND
+  //                     i.e. the FROM node (supplier) must come before the TO node (demand)
+  //                     so: TO depends on FROM  →  add FROM to prereq[TO]
+  //
+  // seepageObject / leakageObject / divertObject → target passed in constructor, so target is a prereq of source.
+
+  const nodeMap = {};
+  nodes.forEach(n => nodeMap[n.id] = n);
+
+  // prereq[X] = Set of node IDs that X depends on (must be declared before X)
+  const prereq = {};
+  nodes.forEach(n => prereq[n.id] = new Set());
+
+  conns.forEach(c => {
+    if (c.type === 'downstream') {
+      // A.constructor has downstream=B  →  B must come before A
+      if (prereq[c.from.id]) prereq[c.from.id].add(c.to.id);
+    } else if (c.type === 'supplier') {
+      // DEMAND.constructor has suppliers=list(SUPPLIER): from=SUPPLIER, to=DEMAND
+      // → SUPPLIER must come before DEMAND
+      if (prereq[c.to.id]) prereq[c.to.id].add(c.from.id);
+    } else if (['seepageObject','leakageObject','divertObject'].includes(c.type)) {
+      // A.constructor has seepageObject/leakageObject/divertObject=B: from=A, to=B
+      // → B must come before A
+      if (prereq[c.from.id]) prereq[c.from.id].add(c.to.id);
+    }
+  });
+
+  // successors[X] = nodes that have X as a prerequisite (i.e. they depend on X)
+  // When X is emitted, decrement their inDeg
+  const successors = {};
+  nodes.forEach(n => successors[n.id] = []);
+  nodes.forEach(n => {
+    prereq[n.id].forEach(preId => {
+      if (successors[preId]) successors[preId].push(n.id);
+    });
+  });
+
+  // inDeg = number of unfulfilled prerequisites
+  const inDeg = {};
+  nodes.forEach(n => inDeg[n.id] = prereq[n.id].size);
+
+  // Kahn BFS
+  const queue = nodes.filter(n => inDeg[n.id] === 0).map(n => n.id);
+  const result = [];
+
+  while (queue.length) {
+    const id = queue.shift();
+    result.push(nodeMap[id]);
+    (successors[id] || []).forEach(depId => {
+      inDeg[depId]--;
+      if (inDeg[depId] === 0) queue.push(depId);
+    });
+  }
+
+  // Append any remaining nodes (cycles / isolated — should not occur in valid models)
+  nodes.forEach(n => { if (!result.find(r => r.id === n.id)) result.push(n); });
+  return result;
+}
+function copyCode(){navigator.clipboard.writeText(document.getElementById('code-output').value).then(()=>{const b=event.target;b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1500);});}
+function showCode(){switchTab('code');generateCode();}
+
+// ══════════════════════════════════════════════════
+// ABOUT MODAL
+// ══════════════════════════════════════════════════
+function openAbout(){document.getElementById('about-modal').classList.add('open');}
+function closeAbout(e){if(!e||e.target===document.getElementById('about-modal'))document.getElementById('about-modal').classList.remove('open');}
+
+// ══════════════════════════════════════════════════
+// HELP MODAL
+// ══════════════════════════════════════════════════
+let _helpIdx=0;
+const HELP_PAGES=[
+/* 0 — Interface */
+`<div class="help-section">
+  <div class="help-section-title">Keyboard Shortcuts</div>
+  ${[['V','Select mode — click nodes to select, drag to reposition'],['R','River tool'],['S','Reservoir tool'],['J','Junction tool'],['D','Diversion tool'],['A','Aquifer tool'],['M','Demand Site tool'],['C','Connect mode — click source then target node'],['Esc','Return to Select mode'],['Delete / Backspace','Delete the currently selected node and all its connections']].map(([k,v])=>`<div class="help-row"><span class="help-key"><span class="help-kbd">${k}</span></span><span class="help-val">${v}</span></div>`).join('')}
+</div>
+<div class="help-section">
+  <div class="help-section-title">Top Bar Controls</div>
+  ${[['Area name','Name for createArea() and all addObjectToArea() calls in the R script'],['Start / End','Simulation period in YYYY-MM-DD — maps to simulation list()'],['Interval','Monthly / weekly / daily time step'],['Map BG','Toggle between dark CartoDB tiles and light OpenStreetMap tiles'],['Show Labels','Displays floating name labels on all nodes on the map'],['Clear','Removes all nodes, connections and labels after confirmation'],['R Code','Generates the complete WRSS R script and opens the Code tab']].map(([k,v])=>`<div class="help-row"><span class="help-key">${k}</span><span class="help-val">${v}</span></div>`).join('')}
+</div>
+<div class="help-section">
+  <div class="help-section-title">Left Toolbar</div>
+  ${[['Select','Click to select a node and open Properties. Drag nodes to reposition — connections update automatically.'],['River … Demand','Object placement tools. Click tool then click the map to place. Returns to Select after placement.'],['Connect','Draw a typed link between two nodes. Click source, then target — a dialog asks for the connection type.'],['Delete','Removes the selected node and all its connections. Greyed out when nothing is selected.'],['About','Software information and developer contact.'],['Help','This reference window.']].map(([k,v])=>`<div class="help-row"><span class="help-key">${k}</span><span class="help-val">${v}</span></div>`).join('')}
+</div>`,
+
+/* 1 — Objects */
+`<div class="help-section">
+  <div class="help-section-title">Object Types &amp; WRSS Constructors</div>
+  ${[['#4fc3f7','River','createRiver()','A river reach or channel. Carries a discharge time series (MCM) and can lose volume to seepage.'],['#2196f3','Reservoir','createReservoir()','Storage or hydropower dam. Requires geometry (capacity, dead storage, rating curves). Full hydropower plant specification available when type = "hydropower".'],['#bdbdbd','Junction','createJunction()','Confluence or split point. Collects inflows from upstream and routes to one downstream object.'],['#ff9800','Diversion','createDiversion()','Diversion dam / headworks. Splits flow between a divertObject and a downstream pass-through. Capacity in CMS.'],['#a1887f','Aquifer','createAquifer()','Lumped groundwater body. Accepts recharge, loses volume through leakage, and can supply demand sites.'],['#ef5350','Demand Site','createDemandSite()','Water consumer. Demand specified as a direct MCM time series or computed from crop area × water-use rate × seasonal variation.']].map(([c,name,fn,desc])=>`<div class="help-type-row" style="border-color:${c}33;background:${c}06"><div class="help-type-dot" style="background:${c}"></div><div><div class="help-type-name">${name}</div><div class="help-type-fn" style="color:${c}">${fn}</div><div class="help-type-desc">${desc}</div></div></div>`).join('')}
+</div>`,
+
+/* 2 — Properties */
+`<div class="help-section">
+  <div class="help-section-title">Using the Properties Panel</div>
+  <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px">
+    Click any map node to open its Properties. Fields match the WRSS constructor arguments. Labels show <span class="help-badge hb-req">required</span> or <span class="help-badge hb-opt">optional</span> status. Topology links (downstream, seepageObject, etc.) are set via the Connect tool — the panel shows their live status. Hover any <b style="color:var(--accent)">?</b> badge next to a field label for a detailed explanation.
+  </div>
+</div>
+<div class="help-section">
+  <div class="help-section-title">Time Series Inputs <span class="help-badge hb-ts">time series</span></div>
+  <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:8px">Used for: <b>discharge</b> (river), <b>netEvaporation</b> (reservoir), <b>rechargeTS</b> (aquifer), <b>demandTS / waterVariation</b> (demand).</div>
+  ${[['+&nbsp;Cell','Append one blank cell to the right end of the strip'],['+12 / +52','Append 12 (monthly) or 52 (weekly) cells at once'],['⬆ CSV/TXT','Import a flat list of numbers from a file — any delimiter (comma, semicolon, tab, space). All numbers found in order are loaded.'],['× on hover','Hover any cell then click × to delete that value'],['Index row','Grey numbers above cells show 1-based position in the vector']].map(([k,v])=>`<div class="help-row"><span class="help-key">${k}</span><span class="help-val">${v}</span></div>`).join('')}
+</div>
+<div class="help-section">
+  <div class="help-section-title">Matrix / Rating Curve Inputs <span class="help-badge hb-mat">matrix</span></div>
+  <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:8px">Used for: <b>storageAreaTable</b>, <b>storageElevationTable</b>, <b>dischargeElevationTable</b> (reservoir), <b>efficiency</b> (hydropower).</div>
+  ${[['+&nbsp;Row','Append a blank two-column row'],['⬆ CSV/TXT','Each file line with ≥ 2 numbers becomes one table row. Lines starting with # are skipped.'],['× per row','Delete that individual row'],['Column headers','Show the physical units for each column']].map(([k,v])=>`<div class="help-row"><span class="help-key">${k}</span><span class="help-val">${v}</span></div>`).join('')}
+</div>
+<div class="help-section">
+  <div class="help-section-title">Conditional Hydropower Panel</div>
+  <div style="font-size:12px;color:var(--text2);line-height:1.7">The <b>plant</b>, <b>penstock</b>, and <b>dischargeElevationTable</b> groups are hidden when <code style="color:var(--accent)">type = storage</code> and animate open when you switch to <code style="color:var(--orange)">type = hydropower</code>. No page reload needed.</div>
+</div>`,
+
+/* 3 — Connections */
+`<div class="help-section">
+  <div class="help-section-title">How to Connect Nodes</div>
+  <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px">
+    Press <span class="help-kbd">C</span> or click <b>Connect</b> in the toolbar. Click the <b>source</b> node (it highlights), then the <b>target</b> node. A dialog asks for the connection type. Each type maps to a specific WRSS constructor argument.
+  </div>
+</div>
+<div class="help-section">
+  <div class="help-section-title">Connection Types</div>
+  ${[['#00d4ff','downstream','Any node','Any','Outflow routes to target. → downstream= argument. Drawn as a solid line.'],['#39d353','supplier','River, Reservoir, Aquifer, Diversion','Demand Site','Source supplies the target demand site. → suppliers=list(...) on the demand constructor.'],['#9c27b0','seepageObject','River, Reservoir','Any','Seepage losses route to target. → seepageObject=. Requires seepageFraction > 0.'],['#ff9800','leakageObject','Aquifer','Any','Aquifer leakage drains to target. → leakageObject=. Requires leakageFraction > 0.'],['#ff5722','divertObject','Diversion','Any','Diverted volume routes to target. → divertObject=.']].map(([c,t,src,tgt,m])=>`<div class="conn-legend"><div class="conn-legend-dot" style="background:${c}"></div><div style="flex:1"><div style="font-size:12px;font-weight:500">${t}</div><div style="font-size:11px;color:var(--text2)">${m}</div></div><div style="font-size:10px;color:var(--text2);text-align:right;min-width:80px">${src}<br>→ ${tgt}</div></div>`).join('')}
+</div>
+<div class="help-section">
+  <div class="help-section-title">Deleting Connections</div>
+  <div style="font-size:12px;color:var(--text2);line-height:1.7">In the Properties panel, the <b>Connections</b> section lists all links for the selected node. <b>Click any row</b> to delete that connection — it turns red on hover. The map line and arrow are removed immediately.</div>
+</div>`,
+
+/* 4 — R Code */
+`<div class="help-section">
+  <div class="help-section-title">Generated Script Structure</div>
+  ${[['library(WRSS)','Package import'],['simulation <- list(...)','Simulation period passed to createArea()'],['Area <- createArea(...)','Top-level study area object'],['Node constructors','One createXxx() block per node in topological order (upstream first) so R object references resolve correctly'],['addObjectToArea(...)','Registers each node with the Area'],['seepageObject/leakageObject/divertObject','Passed directly in constructor — target declared first via topological sort'],['sim(Area)','Runs the full simulation'],['plot(result)','Visualises output'],['risk() / GOF()','Commented performance templates']].map(([k,v])=>`<div class="help-row"><span class="help-key" style="font-size:10px;min-width:160px">${k}</span><span class="help-val">${v}</span></div>`).join('')}
+</div>
+<div class="help-section">
+  <div class="help-section-title">Tips</div>
+  ${[['Time series','Written as inline c(v1,v2,...) vectors. For long series, assign them to named R variables first and substitute.'],['Rating curves','Exported as cbind(col1=c(...), col2=c(...)) — valid R matrix construction.'],['Blank fields','Omitted from the constructor (WRSS uses defaults). Required fields left blank emit 0 — fill them before running.'],['Refresh','Switch to the Code tab or click Refresh at any time to regenerate from the current canvas state.'],['Copy','Copies the full script to clipboard for pasting into RStudio or any R console.']].map(([k,v])=>`<div class="help-row"><span class="help-key">${k}</span><span class="help-val">${v}</span></div>`).join('')}
+</div>`,
+];
+
+function openHelp(idx=0){
+  document.getElementById('help-modal').classList.add('open');
+  helpTab(idx);
+}
+function closeHelp(e){if(!e||e.target===document.getElementById('help-modal'))document.getElementById('help-modal').classList.remove('open');}
+function helpTab(i){
+  _helpIdx=i;
+  for(let j=0;j<5;j++){const t=document.getElementById('htab-'+j);t.classList.toggle('active',j===i);}
+  document.getElementById('help-body').innerHTML=HELP_PAGES[i];
+}
+
+// ══════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════
+function setMode(m){
+  currentMode=m;connPendingSource=null;
+  document.getElementById('connect-overlay').style.display='none';
+  const hints={select:'Click node to select · Drag to move',river:'Click to place River',reservoir:'Click to place Reservoir',junction:'Click to place Junction',diversion:'Click to place Diversion',aquifer:'Click to place Aquifer',demand:'Click to place Demand Site'};
+  const hint=document.getElementById('map-hint');hint.textContent=hints[m]||'';hint.classList.remove('hidden');
+  document.getElementById('status-mode').textContent=`Mode: ${m.toUpperCase()}`;
+  map.getContainer().style.cursor=m==='select'?'':'crosshair';
+  updateToolBtns();
+}
+function updateToolBtns(){
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+  const a=document.getElementById(`tool-${currentMode}`);if(a)a.classList.add('active');
+  if(currentMode==='connect')document.getElementById('btn-connect').classList.add('active');
+}
+function switchTab(tab){
+  document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.getElementById(`tab-content-${tab}`).classList.add('active');
+  if(tab==='code')generateCode();
+}
+function updateStatus(){
+  document.getElementById('status-nodes').textContent=nodes.length;
+  document.getElementById('status-conns').textContent=connections.length;
+  document.getElementById('tab-nodes').textContent=`Nodes(${nodes.length})`;
+}
+
+map.on('click',()=>{
+  if(currentMode==='select'&&selectedNode){
+    selectedNode.marker.setIcon(mkIcon(selectedNode.type));selectedNode=null;
+    document.getElementById('props-content').style.display='none';
+    document.getElementById('props-empty').style.display='';
+    setDelBtnState(false);updateNodesList();
+  }
+});
+
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  const k={v:'select',r:'river',s:'reservoir',j:'junction',d:'diversion',a:'aquifer',m:'demand'};
+  if(e.key==='c'||e.key==='C'){setConnectMode();return;}
+  if(k[e.key])setMode(k[e.key]);
+  if(e.key==='Escape')setMode('select');
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedNode)deleteNode(selectedNode);
+});
+
+setMode('select');updateStatus();updateNodesList();
+
+// ══════════════════════════════════════════════════
+// JSON IMPORT ENGINE
+// ══════════════════════════════════════════════════
+
+let _importPending = null; // holds parsed JSON until user confirms
+
+function importJSON(evt) {
+  const file = evt.target.files[0];
+  evt.target.value = ''; // reset so same file can be re-imported
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let data;
+    try { data = JSON.parse(e.target.result); }
+    catch(err) { alert('Invalid JSON file: ' + err.message); return; }
+    _importPending = data;
+    showImportPreview(data);
+  };
+  reader.readAsText(file);
+}
+
+function showImportPreview(data) {
+  const op = data.operation || data;
+  const counts = {
+    rivers:     (op.rivers     || []).length,
+    reservoirs: (op.reservoirs || []).length,
+    junctions:  (op.junctions  || []).length,
+    aquifers:   (op.aquifers   || []).length,
+    diversions: (op.diversions || []).length,
+    demands:    (op.demands    || []).length,
+  };
+  const sim = op.simulation || {};
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  // Count connections
+  let connCount = 0;
+  const allNodes = [
+    ...(op.rivers||[]), ...(op.reservoirs||[]), ...(op.junctions||[]),
+    ...(op.aquifers||[]), ...(op.diversions||[]), ...(op.demands||[])
+  ];
+  allNodes.forEach(n => {
+    const o = n.operation || n;
+    if (o.downstream) connCount++;
+    if (o.seepageObject) connCount++;
+    if (o.leakageObject) connCount++;
+    if (o.divertObject)  connCount++;
+    if (o.suppliers && o.suppliers.length) connCount += o.suppliers.length;
+  });
+
+  const warnings = [];
+  if (!sim.start) warnings.push('No simulation period found — defaults will be kept.');
+  if (total === 0) warnings.push('No objects found in this JSON file.');
+
+  document.getElementById('import-summary').innerHTML =
+    `<b>Objects detected:</b><br>` +
+    Object.entries(counts).filter(([,v])=>v>0)
+      .map(([k,v])=>`  ${TM[k]?`<span style="color:${TM[k].color}">${TM[k].label}</span>`:k}: <b style="color:var(--text)">${v}</b>`).join('<br>') +
+    `<br><b>Connections:</b> <b style="color:var(--text)">${connCount}</b><br>` +
+    (sim.start ? `<b>Simulation:</b> ${sim.start} → ${sim.end} (${sim.interval})` : '');
+
+  const warnEl = document.getElementById('import-warn');
+  if (warnings.length) {
+    warnEl.innerHTML = '⚠ ' + warnings.join('<br>⚠ ');
+    warnEl.style.display = 'block';
+  } else {
+    warnEl.style.display = 'none';
+  }
+
+  document.getElementById('import-modal').classList.add('open');
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').classList.remove('open');
+  _importPending = null;
+}
+
+function confirmImport() {
+  document.getElementById('import-modal').classList.remove('open');
+  if (!_importPending) return;
+  try {
+    doImport(_importPending);
+  } catch(err) {
+    alert('Import error: ' + err.message + '\n\n' + err.stack);
+  }
+  _importPending = null;
+}
+
+// ── Node name normalisation (JSON uses mixed case, we store as-is but need lookup)
+function normName(s){ return s ? String(s).toLowerCase().trim() : ''; }
+
+// ══════════════════════════════════════════════════
+// TOPOLOGICAL + LANE-ALIGNED AUTO-LAYOUT
+//
+// Goal: upstream nodes appear to the LEFT of the nodes they feed,
+//       AND nodes that are directly connected share the same
+//       horizontal LANE (row) so connection lines are as flat as possible.
+//
+// Algorithm in four passes:
+//   1. Build full directed edge graph (all link types).
+//   2. Longest-path column assignment  (x-axis = flow order).
+//   3. Lane assignment via BFS from sources: a node inherits its
+//      primary upstream parent's lane; sibling branches get new lanes.
+//   4. Collision resolution: if two nodes in the same column claim
+//      the same lane, bump one down and re-compact.
+// ══════════════════════════════════════════════════
+function autoLayout(allDefs) {
+  const originLat = 36.0, originLng = 44.0;
+  const LNG_STEP  = 2.4;   // degrees longitude per column  (x-axis)
+  const LAT_STEP  = 1.8;   // degrees latitude  per lane    (y-axis)
+
+  const N = allDefs.length;
+  if (N === 0) return {};
+
+  // ── normalised name helpers ──────────────────────
+  const names = allDefs.map(d => normName(d.name));
+  const idx   = {};   // normName → array index
+  names.forEach((n, i) => idx[n] = i);
+
+  // ── Pass 1: build edge lists ─────────────────────
+  // children[i] = indices of nodes that i flows INTO  (i is upstream)
+  // parents [i] = indices of nodes that flow INTO i   (i is downstream)
+  const children = Array.from({length:N}, ()=>[]);
+  const parents  = Array.from({length:N}, ()=>[]);
+  const edges    = [];   // [{f, t}]  index pairs
+
+  function addEdge(fromName, toName) {
+    const f = idx[normName(fromName)], t = idx[normName(toName)];
+    if (f === undefined || t === undefined || f === t) return;
+    if (!children[f].includes(t)) {
+      children[f].push(t); parents[t].push(f);
+      edges.push({f, t});
+    }
+  }
+
+  allDefs.forEach((d, i) => {
+    if (d.downstream)    addEdge(d.name, d.downstream);
+    if (d.seepageObject) addEdge(d.name, d.seepageObject);
+    if (d.leakageObject) addEdge(d.name, d.leakageObject);
+    if (d.divertObject)  addEdge(d.name, d.divertObject);
+    if (d.suppliers)     [].concat(d.suppliers).forEach(s => addEdge(s, d.name));
+  });
+
+  // ── Pass 2: column = longest upstream path ───────
+  const col = new Array(N).fill(0);
+  let changed = true, guard = 0;
+  while (changed && guard++ < N * 3) {
+    changed = false;
+    edges.forEach(({f, t}) => {
+      if (col[t] <= col[f]) { col[t] = col[f] + 1; changed = true; }
+    });
+  }
+
+  // ── Pass 3: lane assignment ───────────────────────
+  // Process nodes in topological order (BFS from sources).
+  // Each node tries to inherit the lane of its "primary" upstream parent
+  // (the parent in the highest column, i.e. the most direct predecessor).
+  // If that lane is already taken in this column, it gets a new one.
+  const lane       = new Array(N).fill(-1);
+  const colLanes   = {};   // col → Set of used lanes
+  let   nextLane   = 0;
+
+  function claimLane(i, preferred) {
+    const c = col[i];
+    if (!colLanes[c]) colLanes[c] = new Set();
+    // walk preferred, preferred+1, preferred-1, preferred+2, … until free
+    for (let delta = 0; delta <= N; delta++) {
+      for (const sign of (delta === 0 ? [0] : [1, -1])) {
+        const attempt = preferred + delta * sign;
+        if (attempt < 0) continue;
+        if (!colLanes[c].has(attempt)) {
+          colLanes[c].add(attempt);
+          lane[i] = attempt;
+          return attempt;
+        }
+      }
+    }
+    // fallback (should never reach)
+    colLanes[c].add(nextLane); lane[i] = nextLane; return nextLane++;
+  }
+
+  // BFS order: process nodes with fewer upstream deps first
+  const inDeg   = parents.map(p => p.length);
+  const queue   = [];
+  inDeg.forEach((d, i) => { if (d === 0) queue.push(i); });
+  // Assign sources first — spread them evenly from lane 0 upward
+  // so that separate branches start on distinct lanes
+  let sourceIdx = 0;
+  queue.forEach(i => claimLane(i, sourceIdx++));
+
+  let head = 0;
+  while (head < queue.length) {
+    const cur = queue[head++];
+    children[cur].forEach(child => {
+      // only process once all parents have been assigned
+      inDeg[child]--;
+      if (inDeg[child] === 0) queue.push(child);
+    });
+
+    // Assign lanes to children of cur
+    children[cur].forEach((child, ci) => {
+      if (lane[child] !== -1) return; // already assigned by another parent
+      // Primary child (ci===0 or only child) inherits parent's lane
+      const preferred = ci === 0 ? lane[cur] : lane[cur] + ci;
+      claimLane(child, preferred);
+    });
+  }
+
+  // Any nodes not reached (isolated or in cycles) get fresh lanes
+  allDefs.forEach((_, i) => {
+    if (lane[i] === -1) claimLane(i, nextLane++);
+  });
+
+  // ── Pass 4: compact lanes per column ─────────────
+  // Re-number lanes within each column to 0,1,2,… so there are no gaps,
+  // preserving their relative order.  This keeps rows tight.
+  const colLaneList = {};
+  allDefs.forEach((_, i) => {
+    const c = col[i];
+    if (!colLaneList[c]) colLaneList[c] = [];
+    colLaneList[c].push({i, lane: lane[i]});
+  });
+  Object.values(colLaneList).forEach(arr => {
+    arr.sort((a, b) => a.lane - b.lane);
+    arr.forEach((entry, rank) => { lane[entry.i] = rank; });
+  });
+
+  // ── Global lane count for centring ───────────────
+  const maxLane = Math.max(...lane);
+
+  // ── Final coordinate assignment ──────────────────
+  const result = {};
+  allDefs.forEach((d, i) => {
+    const lng = originLng + col[i] * LNG_STEP;
+    // Centre vertically: lane 0 at top, lane maxLane at bottom, middle = originLat
+    const lat = originLat + (maxLane / 2 - lane[i]) * LAT_STEP;
+    result[normName(d.name)] = { lat, lng };
+  });
+  return result;
+}
+
+function doImport(data) {
+  // Clear canvas first
+  connections.forEach(c=>{if(c.line)map.removeLayer(c.line);if(c.arrow)map.removeLayer(c.arrow);});
+  nodes.forEach(n=>map.removeLayer(n.marker));
+  Object.values(labelMarkers).forEach(m=>map.removeLayer(m));
+  nodes=[]; connections=[]; selectedNode=null; labelMarkers={};
+  nodeCounter={river:0,reservoir:0,junction:0,diversion:0,aquifer:0,demand:0};
+  document.getElementById('props-content').style.display='none';
+  document.getElementById('props-empty').style.display='';
+  setDelBtnState(false);
+
+  const op = data.operation || data;
+  const sim = op.simulation || {};
+
+  // ── 1. Set simulation period
+  if (sim.start) document.getElementById('sim-start').value = sim.start;
+  if (sim.end)   document.getElementById('sim-end').value   = sim.end;
+  if (sim.interval) {
+    const sel = document.getElementById('sim-interval');
+    const ivl = sim.interval.toLowerCase();
+    for (let i=0; i<sel.options.length; i++) {
+      if (sel.options[i].value === ivl) { sel.selectedIndex = i; break; }
+    }
+  }
+  const areaName = (op.name && op.name !== 'unknown') ? op.name : 'MyBasin';
+  document.getElementById('sim-name').value = areaName;
+
+  // ── 2. Collect all node defs for layout
+  const riverDefs    = (op.rivers     || []).map(x=>({type:'river',    ...x.operation||x}));
+  const resDefs      = (op.reservoirs || []).map(x=>({type:'reservoir',...x.operation||x}));
+  const juncDefs     = (op.junctions  || []).map(x=>({type:'junction', ...x.operation||x}));
+  const aquiDefs     = (op.aquifers   || []).map(x=>({type:'aquifer',  ...x.operation||x}));
+  const divDefs      = (op.diversions || []).map(x=>({type:'diversion',...x.operation||x}));
+  const demDefs      = (op.demands    || []).map(x=>({type:'demand',   ...x.operation||x}));
+  const allDefs      = [...riverDefs, ...resDefs, ...juncDefs, ...aquiDefs, ...divDefs, ...demDefs];
+
+  const positions    = autoLayout(allDefs);
+  const nameToNode   = {}; // normName → node object
+
+  // ── helper: place one node programmatically (mirrors placeNode but with explicit latlng)
+  function addNode(type, props, latlng) {
+    nodeCounter[type]++;
+    const id      = `${TM[type].short}${nodeCounter[type]}`;
+    const varName = `${type}${nodeCounter[type]}`;
+    const node = { id, varName, type, latlng, props: { ...defProps(type, id), ...props, name: props.name || id }, marker: null, connections: [] };
+    const marker = L.marker([latlng.lat, latlng.lng], { icon: mkIcon(type), draggable: true }).addTo(map);
+    marker.on('click', e => { L.DomEvent.stopPropagation(e); currentMode==='connect' ? handleConnClick(node) : selectNode(node); });
+    marker.on('dragend', () => { node.latlng = marker.getLatLng(); redrawConns(node); refreshLabel(node); });
+    marker.bindTooltip(`<b>${node.props.name||id}</b><br><span style="color:#8b949e;font-size:10px">${TM[type].label}</span>`, { direction:'top', className:'wrss-tooltip', offset:[0,-16] });
+    node.marker = marker;
+    nodes.push(node);
+    nameToNode[normName(props.name)] = node;
+    showLabel(node);
+    return node;
+  }
+
+  // ── helper: get or assign a latlng for a node name
+  function latLng(name) {
+    const key = normName(name);
+    const pos  = positions[key];
+    return pos ? L.latLng(pos.lat, pos.lng) : L.latLng(36 + Math.random(), 47 + Math.random());
+  }
+
+  // ── 3a. Rivers
+  riverDefs.forEach(d => {
+    const discharge = d.inflow?.discharge || d.discharge || [];
+    addNode('river', {
+      name:            d.name,
+      discharge:       discharge,
+      seepageFraction: d.seepageFraction ?? '',
+      priority:        d.priority ?? '',
+    }, latLng(d.name));
+  });
+
+  // ── 3b. Reservoirs
+  resDefs.forEach(d => {
+    const geo     = d.geometry || {};
+    const plant   = d.plant    || {};
+    const penstock= d.penstock || {};
+    const netEvap = d.netEvaporation?.netEvaporation || d.netEvaporation || [];
+
+    // parseTable: handles two formats:
+    //   1. Internal pairs format: [[v1,a1],[v2,a2], ...]
+    //   2. JSON named-arrays format: { "Volume":[...], "Surface":[...] }
+    //      — column name variants covered: Volume/volume_MCM, Surface/area_Km2,
+    //        Elevation/elev_m, Discharge/disch_cms, Efficiency/efficiency
+    function parseTable(raw, col1Candidates, col2Candidates) {
+      if (!raw) return [];
+      // Format 1: already an array of pairs
+      if (Array.isArray(raw)) {
+        return raw.filter(r => r && r[0] !== null && r[1] !== null);
+      }
+      // Format 2: object with named array columns
+      if (typeof raw === 'object') {
+        const keys = Object.keys(raw);
+        const k1 = col1Candidates.find(c => keys.some(k => k.toLowerCase() === c.toLowerCase()));
+        const k2 = col2Candidates.find(c => keys.some(k => k.toLowerCase() === c.toLowerCase()));
+        const actualK1 = k1 ? keys.find(k => k.toLowerCase() === k1.toLowerCase()) : null;
+        const actualK2 = k2 ? keys.find(k => k.toLowerCase() === k2.toLowerCase()) : null;
+        if (actualK1 && actualK2) {
+          const arr1 = raw[actualK1], arr2 = raw[actualK2];
+          if (Array.isArray(arr1) && Array.isArray(arr2)) {
+            return arr1.map((v, i) => [v, arr2[i]]).filter(r => r[0] !== null && r[1] !== null);
+          }
+        }
+      }
+      return [];
+    }
+
+    const sat = parseTable(geo.storageAreaTable,      ['Volume','volume_MCM'], ['Surface','area_Km2']);
+    const set = parseTable(geo.storageElevationTable, ['Volume','volume_MCM'], ['Elevation','elev_m']);
+    const det = parseTable(geo.dischargeElevationTable, ['Discharge','disch_cms'], ['Elevation','elev_m']);
+    const eff = parseTable(plant.efficiency,          ['Discharge','disch_cms'], ['Efficiency','efficiency']);
+    addNode('reservoir', {
+      name:                  d.name,
+      type:                  d.type || 'storage',
+      netEvaporation:        netEvap,
+      seepageFraction:       d.seepageFraction ?? '',
+      deadStorage:           geo.deadStorage ?? '',
+      capacity:              geo.capacity    ?? '',
+      storageAreaTable:      sat,
+      storageElevationTable: set,
+      dischargeElevationTable: det,
+      initialStorage:        d.initialStorage ?? '',
+      priority:              d.priority ?? '',
+      installedCapacity:     plant.installedCapacity ?? '',
+      efficiency:            eff,
+      designHeadMin:         Array.isArray(plant.designHead) ? plant.designHead[0] : (plant.designHead ?? ''),
+      designHeadMax:         Array.isArray(plant.designHead) ? plant.designHead[1] : '',
+      designFlowMin:         Array.isArray(plant.designFlow) ? plant.designFlow[0] : (plant.designFlow ?? ''),
+      designFlowMax:         Array.isArray(plant.designFlow) ? plant.designFlow[1] : '',
+      turbineAxisElevation:  plant.turbineAxisElevation ?? '',
+      submerged:             plant.submerged ? 'TRUE' : 'FALSE',
+      loss:                  plant.loss ?? '',
+      penstockDiameter:      penstock.diameter  ?? '',
+      penstockLength:        penstock.length    ?? '',
+      penstockRoughness:     penstock.roughness ?? '',
+    }, latLng(d.name));
+  });
+
+  // ── 3c. Junctions
+  juncDefs.forEach(d => {
+    addNode('junction', { name: d.name }, latLng(d.name));
+  });
+
+  // ── 3d. Aquifers
+  aquiDefs.forEach(d => {
+    const recharge = d.inflow?.['natural recharge'] || d.inflow?.recharge || d.rechargeTS || [];
+    addNode('aquifer', {
+      name:            d.name,
+      area:            d.area    ?? '',
+      volume:          d.volume  ?? '',
+      Sy:              d.Sy      ?? '0.1',
+      leakageFraction: d.leakageFraction ?? '',
+      initialStorage:  d.initialStorage  ?? '',
+      priority:        d.priority        ?? '',
+      rechargeTS:      recharge,
+    }, latLng(d.name));
+  });
+
+  // ── 3e. Diversions
+  divDefs.forEach(d => {
+    addNode('diversion', {
+      name:     d.name,
+      capacity: d.capacity ?? '',
+      priority: d.priority ?? '',
+    }, latLng(d.name));
+  });
+
+  // ── 3f. Demands
+  demDefs.forEach(d => {
+    const demandTS    = d.demandTS?.demand  || d.demandTS  || [];
+    const demParams   = d.demandParams      || {};
+    const waterVar    = demParams.waterVariation || [];
+    const hasTS       = demandTS.length > 0;
+    addNode('demand', {
+      name:                d.name,
+      demandInputMode:     hasTS ? 'demandTS' : 'demandParams',
+      demandTS:            demandTS,
+      waterUseRate:        demParams.waterUseRate ?? '',
+      waterVariation:      waterVar,
+      cropArea:            demParams.cropArea     ?? '',
+      returnFlowFraction:  d.returnFlowFraction   ?? '',
+      priority:            d.priority             ?? '',
+    }, latLng(d.name));
+  });
+
+  // ── 4. Wire connections
+  // Build a robust lookup: try exact, then lowercase, then strip spaces
+  function findNode(name) {
+    if (!name) return null;
+    const key = normName(name);
+    if (nameToNode[key]) return nameToNode[key];
+    // fuzzy: try without numbers stripped, partial match
+    for (const [k, v] of Object.entries(nameToNode)) {
+      if (k === key || k.replace(/\s/g,'') === key.replace(/\s/g,'')) return v;
+    }
+    return null;
+  }
+
+  // Helper to create a connection silently (no modal)
+  function wire(srcName, tgtName, type) {
+    const src = findNode(srcName);
+    const tgt = findNode(tgtName);
+    if (!src || !tgt) return;
+    if (connections.find(c=>c.from.id===src.id&&c.to.id===tgt.id&&c.type===type)) return;
+    const clr = CC[type] || '#aaa';
+    const line  = L.polyline([src.latlng, tgt.latlng], { color:clr, weight:2.5, opacity:.85, dashArray:type==='downstream'?null:'6,4' }).addTo(map);
+    const arrow = mkArrow(src.latlng, tgt.latlng, clr); arrow.addTo(map);
+    const conn  = { id: Date.now() + Math.random(), from:src, to:tgt, type, line, arrow };
+    connections.push(conn); src.connections.push(conn); tgt.connections.push(conn);
+  }
+
+  allDefs.forEach(d => {
+    if (d.downstream)    wire(d.name, d.downstream,    'downstream');
+    if (d.seepageObject) wire(d.name, d.seepageObject, 'seepageObject');
+    if (d.leakageObject) wire(d.name, d.leakageObject, 'leakageObject');
+    if (d.divertObject)  wire(d.name, d.divertObject,  'divertObject');
+    if (d.suppliers && d.suppliers.length) {
+      [].concat(d.suppliers).forEach(s => wire(s, d.name, 'supplier'));
+    }
+  });
+
+  // ── 5. Fit map to placed nodes and refresh
+  if (nodes.length) {
+    const latlngs = nodes.map(n => n.latlng);
+    map.fitBounds(L.latLngBounds(latlngs).pad(0.25));
+  }
+  updateStatus(); updateNodesList();
+  // Show labels if checkbox is on
+  if (labelsVisible) nodes.forEach(n => showLabel(n));
+}
+</script>
+
+<!-- ══ IMPORT CONFIRM MODAL ══ -->
+<div id="import-modal" class="modal-backdrop" onclick="if(event.target===this)closeImportModal()">
+  <div class="import-box" onclick="event.stopPropagation()">
+    <div class="import-header">
+      <div class="import-title">Import WRSS JSON Model</div>
+      <button class="import-close" onclick="closeImportModal()">×</button>
+    </div>
+    <div class="import-body">
+      <div class="import-summary" id="import-summary"></div>
+      <div class="import-warn" id="import-warn" style="display:none"></div>
+    </div>
+    <div class="import-footer">
+      <button class="import-cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="import-ok" onclick="confirmImport()">⬇ Import &amp; Populate Canvas</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
